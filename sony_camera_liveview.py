@@ -80,3 +80,4 @@ while 1:
 	test = open('test.jpg', 'w')
 	test.write(f.read(payload['jpeg_data_size']))
 	test.close()
+	f.read(payload['padding_size'])
