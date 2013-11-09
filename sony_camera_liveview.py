@@ -56,7 +56,6 @@ def payload_header(bytes):
 	reserved_1 = int(binascii.hexlify(bytes[8:12]), 16)
 	flag = int(binascii.hexlify(bytes[12]), 16) # 0x00, fixed
 	reserved_2 = int(binascii.hexlify(bytes[13:]), 16)
-	print start_code
 	if flag != 0:
 		return '[error] wrong QX payload header flag'
 	if start_code != 607479929:
@@ -69,3 +68,5 @@ def payload_header(bytes):
 					'resreved_2':reserved_2,
 					}
 	return payload_header
+
+
