@@ -1,6 +1,6 @@
 from sony_camera_api import sony_api
 import json
-import urllib
+import urllib2
 import socket
 
 # Common Header
@@ -30,6 +30,42 @@ import socket
 # | Padding data size ...                                 |
 # ------------------------------JPEG data size + Padding data size
 
-liveview_url = sony_api('startLiveview')['result'][0]
+#liveview_url = sony_api('startLiveview')['result'][0]
+import binascii
 
-print liveview_url
+def common_header(bytes):
+	start_byte = int(binascii.hexlify(bytes[0]), 16)
+	payload_type = int(binascii.hexlify(bytes[1]), 16)
+	sequence_number = int(binascii.hexlify(bytes[2:4]), 16)
+	time_stemp = int(binascii.hexlify(bytes[4:8]), 16)
+	if start_byte != 255: # 0xff fixed
+		return '[error] Not QX livestream start byte'
+	if payload_type != 1: # 0x01 - liveview images
+		return '[error] wrong QX livestream payload type'
+	common_header = {'start_byte': start_byte,
+					'payload_type': payload_type,
+					'sequence_number': sequence_number,
+					'time_stemp': time_stemp, #milliseconds
+					}
+	return common_header
+
+def payload_header(bytes):
+	start_code = int(binascii.hexlify(bytes[0:4]), 16)
+	jpeg_data_size = int(binascii.hexlify(bytes[4:7]), 16)
+	padding_size = int(binascii.hexlify(bytes[7]), 16)
+	reserved_1 = int(binascii.hexlify(bytes[8:12]), 16)
+	flag = int(binascii.hexlify(bytes[12]), 16) # 0x00, fixed
+	reserved_2 = int(binascii.hexlify(bytes[13:]), 16)
+	print start_code
+	if flag != 0:
+		return '[error] wrong QX payload header flag'
+	if start_code != 607479929:
+		return '[error] wrong QX payload header start'
+	payload_header = {'start_code': start_code,
+					'jpeg_data_size': jpeg_data_size,
+					'padding_size': padding_size,
+					'reserved_1': reserved_1,
+					'flag': flag,
+					'resreved_2':reserved_2,
+					}
+	return payload_header
