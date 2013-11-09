@@ -52,7 +52,6 @@ class ControlPoint(object):
 
 import collections
 import urllib2
-import httplib
 import json
 
 QX_ADDR = 'http://10.0.0.1:10000'
