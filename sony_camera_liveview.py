@@ -38,7 +38,7 @@ def common_header(bytes):
 	sequence_number = int(binascii.hexlify(bytes[2:4]), 16)
 	time_stemp = int(binascii.hexlify(bytes[4:8]), 16)
 	if start_byte != 255: # 0xff fixed
-		return '[error] Not QX livestream start byte'
+		return '[error] wrong QX livestream start byte'
 	if payload_type != 1: # 0x01 - liveview images
 		return '[error] wrong QX livestream payload type'
 	common_header = {'start_byte': start_byte,
@@ -69,14 +69,40 @@ def payload_header(bytes):
 	return payload_header
 
 import urllib2
+import thread
+try:
+	from flask import Flask, url_for
+	app = Flask(__name__)
+	@app.route("/")
+	def view():
+		return """<html>
+				<head>
+					<meta http-equiv="refresh" content="1">
+				</head>
+				<img src="http://localhost:5000%s">
+				</html>""" % url_for('static', filename='test.jpg')
+except:
+	app = None
 
-liveview_url = sony_api('startLiveview')['result'][0]
-f = urllib2.urlopen(liveview_url)
+def liveview():
+	liveview_url = sony_api('startLiveview')['result'][0]
+	f = urllib2.urlopen(liveview_url)
 
-while 1:
-	data = f.read(8)
-	data = f.read(128)
-	payload = payload_header(data)
-	test = open('test.jpg', 'w')
-	test.write(f.read(payload['jpeg_data_size']))
-	test.close()
+	while 1:
+		data = f.read(8)
+		data = f.read(128)
+		payload = payload_header(data)
+		# [TODO] when debug mode, print payload for debug
+		# if app.config('DEBUG'):
+		#     print payload
+		test = open('./static/test.jpg', 'w')
+		test.write(f.read(payload['jpeg_data_size']))
+		test.close()
+		f.read(payload['padding_size'])
+
+if __name__ == "__main__":
+	thread.start_new_thread(liveview, ())
+	if app:
+		app.run()
+
+
