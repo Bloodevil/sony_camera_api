@@ -30,7 +30,6 @@ import socket
 # | Padding data size ...                                 |
 # ------------------------------JPEG data size + Padding data size
 
-#liveview_url = sony_api('startLiveview')['result'][0]
 import binascii
 
 def common_header(bytes):
@@ -69,4 +68,15 @@ def payload_header(bytes):
 					}
 	return payload_header
 
+import urllib2
 
+liveview_url = sony_api('startLiveview')['result'][0]
+f = urllib2.urlopen(liveview_url)
+
+while 1:
+	data = f.read(8)
+	data = f.read(128)
+	payload = payload_header(data)
+	test = open('test.jpg', 'w')
+	test.write(f.read(payload['jpeg_data_size']))
+	test.close()
