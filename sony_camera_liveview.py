@@ -1,4 +1,4 @@
-from sony_camera_api import sony_api
+from sony_camera_api import SonyAPI
 import json
 import urllib2
 import socket
@@ -85,7 +85,8 @@ except:
     app = None
 
 def liveview():
-    liveview_url = sony_api('startLiveview')['result'][0]
+    camera = SonyAPI()
+    liveview_url = camera.startLiveview()['result'][0]
     f = urllib2.urlopen(liveview_url)
 
     while 1:
