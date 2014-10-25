@@ -5,7 +5,7 @@ import xml
 import time
 
 SSDP_ADDR = "239.255.255.250"  # The remote host
-SSDP_PORT = 1900	# The same port as used by the server
+SSDP_PORT = 1900    # The same port as used by the server
 SSDP_MX = 1
 SSDP_ST = "urn:schemas-sony-com:service:ScalarWebAPI:1"
 SSDP_TIMEOUT = 10000  #msec
@@ -13,75 +13,190 @@ PACKET_BUFFER_SIZE = 1024
 
 # I don't know how I can use this Upnp (...)
 class ControlPoint(object):
-	def __init__(self):
-		self.__bind_sockets()
+    def __init__(self):
+        self.__bind_sockets()
 
-	def __bind_sockets(self):
-		self.__udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-		return
+    def __bind_sockets(self):
+        self.__udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        return
 
-	def discover(self, duration):
-		# Set the socket to broadcast mode.
-		self.__udp_socket.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL , 2)
+    def discover(self, duration):
+        # Set the socket to broadcast mode.
+        self.__udp_socket.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL , 2)
 
-		msg = '\r\n'.join(["M-SEARCH * HTTP/1.1",
-						   "HOST: 239.255.255.250:1900",
-						   "MAN: ssdp:discover",
-						   "MX: " + str(duration),
-						   "ST: " + SSDP_ST,
-						   "USER-AGENT: ",
-						   ""])
+        msg = '\r\n'.join(["M-SEARCH * HTTP/1.1",
+                           "HOST: 239.255.255.250:1900",
+                           "MAN: ssdp:discover",
+                           "MX: " + str(duration),
+                           "ST: " + SSDP_ST,
+                           "USER-AGENT: ",
+                           ""])
 
-		# Send the message.
-		self.__udp_socket.sendto(msg, (SSDP_ADDR, SSDP_PORT))
-		# Get the responses.
-		packets = self._listen_for_discover(duration)
-		return packets
+        # Send the message.
+        self.__udp_socket.sendto(msg, (SSDP_ADDR, SSDP_PORT))
+        # Get the responses.
+        packets = self._listen_for_discover(duration)
+        return packets
 
-	def _listen_for_discover(self, duration):
-		start = time.time()
-		packets = []
+    def _listen_for_discover(self, duration):
+        start = time.time()
+        packets = []
 
-		while (time.time() < (start + duration)):
-			try:
-				data, addr = self.__udp_socket.recvfrom(1024)
-				packets.append((data, addr))
-			except:
-				pass
-		return packets
+        while (time.time() < (start + duration)):
+            try:
+                data, addr = self.__udp_socket.recvfrom(1024)
+                packets.append((data, addr))
+            except:
+                pass
+        return packets
 
 import collections
 import urllib2
 import json
 
-QX_ADDR = 'http://10.0.0.1:10000'
 
-def truefalse(param):
-	params = []
-	for x in param:
-		if x.lower() == 'true':
-			params.append(True)
-		elif x.lower() == 'false':
-			params.append(False)
-		else:
-			params.append(x)
-	return params
+class SonyAPI():
 
-def sony_api(method=None, param=[]):
-	true = True
-	false = False
-	null = None
+    def __init__(self, QX_ADDR=None, params=None):
+        if not QX_ADDR:
+            self.QX_ADDR = 'http://10.0.0.1:10000'
+        else:
+            self.QX_ADDR = QX_ADDR
+        if not params:
+            self.params = collections.OrderedDict([
+            ("method", ""),
+            ("params", []),
+            ("id", 1),  # move to setting
+            ("version", "1.0")])  # move to setting
+        else:
+            self.params = params
 
-	# [TODO] discover camera.
-	params = collections.OrderedDict([
-			("method", "getAvailableApiList"),
-			("params", []),
-			("id", 1),
-			("version", "1.0")])
-	if method:
-		params["method"] = method
-	if param:
-		params["params"] = truefalse(param)
+    def _truefalse(self, param):
+        params = []
+        for x in param:
+            if x.lower() == 'true':
+                params.append(True)
+            elif x.lower() == 'false':
+                params.append(False)
+            else:
+                params.append(x)
+        return params
 
-	return eval(urllib2.urlopen(QX_ADDR + "/sony/camera", json.dumps(params)).read())
+    def _cmd(self, method=None, param=[]):
+        true = True
+        false = False
+        null = None
 
+        if method:
+            self.params["method"] = method
+        if param:
+            self.params["params"] = self._truefalse(param)
+
+        try:
+            result = eval(urllib2.urlopen(self.QX_ADDR + "/sony/camera", json.dumps(params)).read())
+        except:
+            result = "[ERROR] camera doesn't work"
+        return result
+
+    def setShootMode(self, param=None):
+        if not param:
+            print """[ERROR] please enter the param like below
+            "still"            Still image shoot mode
+            "movie"            Movie shoot mode
+            "audio"            Audio shoot mode
+            "intervalstill"    Interval still shoot mode
+            """
+        return self._cmd(method="setShootMode", param=param)
+
+    def getShootMode(self):
+        return self._cmd(method="getShootMode")
+
+    def getSupportedShootMode(self):
+        return self._cmd(method="getSupportedShootMode")
+
+    def getAvailableShootMode(self):
+        return self._cmd(method="getAvailableShootMode")
+
+    def actTakePicture(self):
+        return self._cmd(method="actTakePicture")
+
+    def awaitTakePicture(self):
+        return self._cmd(method="awaitTakePicture")
+
+    def startContShooting(self):
+        return self._cmd(method="startContShooting")
+
+    def stopContShooting(self):
+        return self._cmd(method="stopContShooting")
+
+    def startMovieRec(self):
+        return self._cmd(method="startMovieRec")
+
+    def stopMovieRec(self):
+        return self._cmd(method="stopMovieRec")
+
+    def startAudioRec(self):
+        return self._cmd(method="startAudioRec")
+
+    def stopAudioRec(self):
+        return self._cmd(method="stopAudioRec")
+
+    def startIntervalStillRec(self):
+        return self._cmd(method="startIntervalStillRec")
+
+    def stopIntervalStillRec(self):
+        return self._cmd(method="stopIntervalStillRec")
+
+    def startLiveview(self):
+        return self._cmd(method="startLiveview")
+
+    def stopLiveview(self):
+        return self._cmd(method="stopLiveview")
+
+    def startLiveviewWithSize(self, param=None):
+        if not param:
+            print """[ERROR] please enter the param like below
+        "L"     XGA size scale (the size varies depending on the camera models,
+                and some camera models change the liveview quality instead of
+                making the size larger.)
+        "M"     VGA size scale (the size varies depending on the camera models)
+        """
+        return self._cmd(method="startLiveviewWithSize", param=param)
+
+    def getLiveviewSize(self):
+        return self._cmd(method="getLiveviewSize")
+
+    def getSupportedLiveviewSize(self):
+        return self._cmd(method="getSupportedLiveviewSize")
+
+    def getAvailableLiveviewSize(self):
+        return self._cmd(method="getAvailableLiveviewSize")
+
+    def setLiveviewFrameInfo(self, param=None):
+        if not param:
+            print """
+        "frameInfo"
+                true - Transfer the liveview frame information
+                false - Not transfer
+        e.g) SonyAPI.setLiveviewFrameInfo(param=[{"frameInfo": true}])
+        """
+        return self._cmd(method="setLiveviewFrameInfo")
+
+    def getLiveviewFrameInfo(self):
+        return self._cmd(method="getLiveviewFrameInfo")
+
+    def actZoom(self, param=None):
+        if not param:
+            print """ ["direction", "movement"]
+            direction
+                "in"        Zoom-In
+                "out"       Zoom-Out
+            movement
+                "start"     Long push
+                "stop"      Stop
+                "1shot"     Short push
+            """
+        return self._cmd(method="actZoom", param=param)
+
+
+ 
