@@ -195,8 +195,57 @@ class SonyAPI():
                 "start"     Long push
                 "stop"      Stop
                 "1shot"     Short push
+            e.g) SonyAPI.actZoom(param=["in", "start"])
             """
         return self._cmd(method="actZoom", param=param)
 
+    def setZoomSetting(self, param=None):
+        if not param:
+            print """
+            "zoom"
+                "Optical Zoom Only"                Optical zoom only.
+                "On:Clear Image Zoom"              On:Clear Image Zoom.
+            e.g) SonyAPI.setZoomSetting(param=[{"zoom": "Optical Zoom Only"}])
+            """
+        return self._cmd(method="setZoomSetting", param=param)
 
+    def getZoomSetting(self)
+        return self._cmd(method="getZoomSetting")
+
+    def getSupportedZoomSetting(self)
+        return self._cmd(method="getSupportedZoomSetting")
  
+    def getAvailableZoomSetting(self)
+        return self._cmd(method="getAvailableZoomSetting")
+
+    def actHalfPressShutter(self)
+        return self._cmd(method="actHalfPressShutter")
+
+    def cancelHalfPressShutter(self)
+        return self._cmd(method="cancelHalfPressShutter")
+
+    def setTouchAFPosition(self, param=None)
+        if not param:
+            print """ [ X-axis position, Y-axis position]
+                X-axis position     Double
+                Y-axis position     Double
+            e.g) SonyAPI.setTouchAFPosition(param=[ 23.2, 45.2 ])
+            """
+        return self._cmd(method="setTouchAFPosition", param=param)
+
+    def getTouchAFPosition(self)
+        return self._cmd(method="getTouchAFPosition")
+
+    def cancelTouchAFPosition(self)
+        return self._cmd(method="cancelTouchAFPosition")
+
+    def actTrackingFocus(self, param=None)
+        if not param:
+            print """
+                "xPosition"     double                X-axis position
+                "yPosition"     double                Y-axis position
+            e.g) SonyAPI.actTrackingFocus(param={"xPosition":23.2, "yPosition": 45.2})
+            """
+        return self._cmd(method="actTrackingFocus", param=param)
+
+
