@@ -108,6 +108,151 @@ class SonyAPI():
             """
         return self._cmd(method="setShootMode", param=param)
 
+
+    def startLiveviewWithSize(self, param=None):
+        if not param:
+            print """[ERROR] please enter the param like below
+        "L"     XGA size scale (the size varies depending on the camera models,
+                and some camera models change the liveview quality instead of
+                making the size larger.)
+        "M"     VGA size scale (the size varies depending on the camera models)
+        """
+
+        return self._cmd(method="startLiveviewWithSize", param=param)
+
+    def setLiveviewFrameInfo(self, param=None):
+        if not param:
+            print """
+        "frameInfo"
+                true - Transfer the liveview frame information
+                false - Not transfer
+        e.g) SonyAPI.setLiveviewFrameInfo(param=[{"frameInfo": true}])
+        """
+        return self._cmd(method="setLiveviewFrameInfo", param=param)
+
+    def actZoom(self, param=None):
+        if not param:
+            print """ ["direction", "movement"]
+            direction
+                "in"        Zoom-In
+                "out"       Zoom-Out
+            movement
+                "start"     Long push
+                "stop"      Stop
+                "1shot"     Short push
+            e.g) SonyAPI.actZoom(param=["in", "start"])
+            """
+        return self._cmd(method="actZoom", param=param)
+
+    def setZoomSetting(self, param=None):
+        if not param:
+            print """
+            "zoom"
+                "Optical Zoom Only"                Optical zoom only.
+                "On:Clear Image Zoom"              On:Clear Image Zoom.
+            e.g) SonyAPI.setZoomSetting(param=[{"zoom": "Optical Zoom Only"}])
+            """
+        return self._cmd(method="setZoomSetting", param=param)
+
+    def setTouchAFPosition(self, param=None):
+        if not param:
+            print """ [ X-axis position, Y-axis position]
+                X-axis position     Double
+                Y-axis position     Double
+            e.g) SonyAPI.setTouchAFPosition(param=[ 23.2, 45.2 ])
+            """
+        return self._cmd(method="setTouchAFPosition", param=param)
+
+    def actTrackingFocus(self, param=None):
+        if not param:
+            print """
+                "xPosition"     double                X-axis position
+                "yPosition"     double                Y-axis position
+            e.g) SonyAPI.actTrackingFocus(param={"xPosition":23.2, "yPosition": 45.2})
+            """
+        return self._cmd(method="actTrackingFocus", param=param)
+
+    def setTrackingFocus(self, param=None):
+        return self._cmd(method="setTrackingFocus", param=param)
+
+    def setContShootingMode(self, param=None):
+        return self._cmd(method="setContShootingMode", param=param)
+
+    def setContShootingSpeed(self, param=None):
+        return self._cmd(method="setContShootingSpeed", param=param)
+
+    def setSelfTimer(self, param=None):
+        return self._cmd(method="setSelfTimer", param=param)
+
+    def setExposureMode(self, param=None):
+        return self._cmd(method="setExposureMode", param=param)
+
+    def setFocusMode(self, param=None):
+        return self._cmd(method="setFocusMode", param=param)
+
+    def setExposureCompensation(self, param=None):
+        return self._cmd(method="setExposureCompensation", param=param)
+
+    def setFNumber(self, param=None):
+        return self._cmd(method="setFNumber", param=param)
+
+    def setShutterSpeed(self, param=None):
+        return self._cmd(method="setShutterSpeed", param=param)
+
+    def setIsoSpeedRate(self, param=None):
+        return self._cmd(method="setIsoSpeedRate", param=param)
+
+    def setWhiteBalance(self, param=None):
+        return self._cmd(method="setWhiteBalance", param=param)
+
+    def setProgramShift(self, param=None):
+        return self._cmd(method="setProgramShift", param=param)
+
+    def setFlashMode(self, param=None):
+        return self._cmd(method="setFlashMode", param=param)
+
+    def setStillSizesetStillQuality(self, param=None):
+        return self._cmd(method="setStillSizesetStillQuality", param=param)
+
+    def setPostviewImageSize(self, param=None):
+        return self._cmd(method="setPostviewImageSize", param=param)
+
+    def setMovieFileFormat(self, param=None):
+        return self._cmd(method="setMovieFileFormat", param=param)
+
+    def setMovieQuality(self, param=None):
+        return self._cmd(method="setMovieQuality", param=param)
+
+    def setSteadyMode(self, param=None):
+        return self._cmd(method="setSteadyMode", param=param)
+
+    def setViewAngle(self, param=None):
+        return self._cmd(method="setViewAngle", param=param)
+
+    def setSceneSelection(self, param=None):
+        return self._cmd(method="setSceneSelection", param=param)
+
+    def setColorSetting(self, param=None):
+        return self._cmd(method="setColorSetting", param=param)
+
+    def setIntervalTime(self, param=None):
+        return self._cmd(method="setIntervalTime", param=param)
+
+    def setFlipSetting(self, param=None):
+        return self._cmd(method="setFlipSetting", param=param)
+
+    def setTvColorSystem(self, param=None):
+        return self._cmd(method="setTvColorSystem", param=param)
+
+    def setCameraFunction(self, param=None):
+        return self._cmd(method="setCameraFunction", param=param)
+
+    def getSourceList(self, param=None):
+        return self._cmd(method="getSourceList", param=param)
+
+    def getContentCount(self, param=None):
+        return self._cmd(method="getContentCount", param=param)
+
     def getShootMode(self):
         return self._cmd(method="getShootMode")
 
@@ -153,99 +298,165 @@ class SonyAPI():
     def stopLiveview(self):
         return self._cmd(method="stopLiveview")
 
-    def startLiveviewWithSize(self, param=None):
-        if not param:
-            print """[ERROR] please enter the param like below
-        "L"     XGA size scale (the size varies depending on the camera models,
-                and some camera models change the liveview quality instead of
-                making the size larger.)
-        "M"     VGA size scale (the size varies depending on the camera models)
-        """
-        return self._cmd(method="startLiveviewWithSize", param=param)
-
     def getLiveviewSize(self):
         return self._cmd(method="getLiveviewSize")
 
     def getSupportedLiveviewSize(self):
         return self._cmd(method="getSupportedLiveviewSize")
 
-    def getAvailableLiveviewSize(self):
-        return self._cmd(method="getAvailableLiveviewSize")
-
-    def setLiveviewFrameInfo(self, param=None):
-        if not param:
-            print """
-        "frameInfo"
-                true - Transfer the liveview frame information
-                false - Not transfer
-        e.g) SonyAPI.setLiveviewFrameInfo(param=[{"frameInfo": true}])
-        """
-        return self._cmd(method="setLiveviewFrameInfo")
-
-    def getLiveviewFrameInfo(self):
-        return self._cmd(method="getLiveviewFrameInfo")
-
-    def actZoom(self, param=None):
-        if not param:
-            print """ ["direction", "movement"]
-            direction
-                "in"        Zoom-In
-                "out"       Zoom-Out
-            movement
-                "start"     Long push
-                "stop"      Stop
-                "1shot"     Short push
-            e.g) SonyAPI.actZoom(param=["in", "start"])
-            """
-        return self._cmd(method="actZoom", param=param)
-
-    def setZoomSetting(self, param=None):
-        if not param:
-            print """
-            "zoom"
-                "Optical Zoom Only"                Optical zoom only.
-                "On:Clear Image Zoom"              On:Clear Image Zoom.
-            e.g) SonyAPI.setZoomSetting(param=[{"zoom": "Optical Zoom Only"}])
-            """
-        return self._cmd(method="setZoomSetting", param=param)
-
-    def getZoomSetting(self)
-        return self._cmd(method="getZoomSetting")
-
-    def getSupportedZoomSetting(self)
-        return self._cmd(method="getSupportedZoomSetting")
- 
-    def getAvailableZoomSetting(self)
-        return self._cmd(method="getAvailableZoomSetting")
-
-    def actHalfPressShutter(self)
-        return self._cmd(method="actHalfPressShutter")
-
-    def cancelHalfPressShutter(self)
-        return self._cmd(method="cancelHalfPressShutter")
-
-    def setTouchAFPosition(self, param=None)
-        if not param:
-            print """ [ X-axis position, Y-axis position]
-                X-axis position     Double
-                Y-axis position     Double
-            e.g) SonyAPI.setTouchAFPosition(param=[ 23.2, 45.2 ])
-            """
-        return self._cmd(method="setTouchAFPosition", param=param)
-
-    def getTouchAFPosition(self)
+    def getTouchAFPosition(self):
         return self._cmd(method="getTouchAFPosition")
 
-    def cancelTouchAFPosition(self)
+    def cancelTouchAFPosition(self):
         return self._cmd(method="cancelTouchAFPosition")
 
-    def actTrackingFocus(self, param=None)
-        if not param:
-            print """
-                "xPosition"     double                X-axis position
-                "yPosition"     double                Y-axis position
-            e.g) SonyAPI.actTrackingFocus(param={"xPosition":23.2, "yPosition": 45.2})
-            """
-        return self._cmd(method="actTrackingFocus", param=param)
+    def cancelTrackingFocus(self):
+        return self._cmd(method="cancelTrackingFocus")
+
+    def getTrackingFocus(self):
+        return self._cmd(method="getTrackingFocus")
+
+    def getSupportedTrackingFocus(self):
+        return self._cmd(method="getSupportedTrackingFocus")
+
+    def getAvailableTrackingFocus(self):
+        return self._cmd(method="getAvailableTrackingFocus")
+
+    def getContShootingMode(self):
+        return self._cmd(method="getContShootingMode")
+
+    def getSupportedContShootingMode(self):
+        return self._cmd(method="getSupportedContShootingMode")
+
+    def getAvailableContShootingMode(self):
+        return self._cmd(method="getAvailableContShootingMode")
+
+    def getContShootingSpeed(self):
+        return self._cmd(method="getContShootingSpeed")
+
+    def getSupportedContShootingSpeed(self):
+        return self._cmd(method="getSupportedContShootingSpeed")
+
+    def getAvailableContShootingSpeed(self):
+        return self._cmd(method="getAvailableContShootingSpeed")
+
+    def getSelfTimer(self):
+        return self._cmd(method="getSelfTimer")
+
+    def getSupportedSelfTimer(self):
+        return self._cmd(method="getSupportedSelfTimer")
+
+    def getAvailableSelfTimer(self):
+        return self._cmd(method="getAvailableSelfTimer")
+
+    def getExposureMode(self):
+        return self._cmd(method="getExposureMode")
+
+    def getSupportedExposureMode(self):
+        return self._cmd(method="getSupportedExposureMode")
+
+    def getWhiteBalance(self):
+        return self._cmd(method="getWhiteBalance")
+
+    def getSupportedWhiteBalance(self):
+        return self._cmd(method="getSupportedWhiteBalance")
+
+    def getAvailableWhiteBalance(self):
+        return self._cmd(method="getAvailableWhiteBalance")
+
+    def getSupportedProgramShift(self):
+        return self._cmd(method="getSupportedProgramShift")
+
+    def getFlashMode(self):
+        return self._cmd(method="getFlashMode")
+
+    def getSupportedFlashMode(self):
+        return self._cmd(method="getSupportedFlashMode")
+
+    def getAvailableFlashMode(self):
+        return self._cmd(method="getAvailableFlashMode")
+
+    def getStillSize(self):
+        return self._cmd(method="getStillSize")
+
+    def getSupportedStillSize(self):
+        return self._cmd(method="getSupportedStillSize")
+
+    def getAvailableStillSize(self):
+        return self._cmd(method="getAvailableStillSize")
+
+    def getStillQuality(self):
+        return self._cmd(method="getStillQuality")
+
+    def getSupportedStillQuality(self):
+        return self._cmd(method="getSupportedStillQuality")
+
+    def getAvailableStillQuality(self):
+        return self._cmd(method="getAvailableStillQuality")
+
+    def getPostviewImageSize(self):
+        return self._cmd(method="getPostviewImageSize")
+
+    def getSupportedPostviewImageSize(self):
+        return self._cmd(method="getSupportedPostviewImageSize")
+
+    def getAvailablePostviewImageSize(self):
+        return self._cmd(method="getAvailablePostviewImageSize")
+
+    def getMovieFileFormat(self):
+        return self._cmd(method="getMovieFileFormat")
+
+    def getSupportedMovieFileFormat(self):
+        return self._cmd(method="getSupportedMovieFileFormat")
+
+    def getAvailableMovieFileFormat(self):
+        return self._cmd(method="getAvailableMovieFileFormat")
+
+    def getMovieQuality(self):
+        return self._cmd(method="getMovieQuality")
+
+    def getSupportedMovieQuality(self):
+        return self._cmd(method="getSupportedMovieQuality")
+
+    def getAvailableMovieQuality(self):
+        return self._cmd(method="getAvailableMovieQuality")
+
+    def getSteadyMode(self):
+        return self._cmd(method="getSteadyMode")
+
+    def getSupportedSteadyMode(self):
+        return self._cmd(method="getSupportedSteadyMode")
+
+    def getAvailableSteadyMode(self):
+        return self._cmd(method="getAvailableSteadyMode")
+
+    def getViewAngle(self):
+        return self._cmd(method="getViewAngle")
+
+    def getSupportedViewAngle(self):
+        return self._cmd(method="getSupportedViewAngle")
+
+    def getAvailableViewAngle(self):
+        return self._cmd(method="getAvailableViewAngle")
+
+    def getSceneSelection(self):
+        return self._cmd(method="getSceneSelection")
+
+    def getSupportedSceneSelection(self):
+        return self._cmd(method="getSupportedSceneSelection")
+
+    def getAvailableSceneSelection(self):
+        return self._cmd(method="getAvailableSceneSelection")
+
+    def getColorSetting(self):
+        return self._cmd(method="getColorSetting")
+
+    def getSupportedColorSetting(self):
+        return self._cmd(method="getSupportedColorSetting")
+
+    def getAvailableColorSetting(self):
+        return self._cmd(method="getAvailableColorSetting")
+
+
 
 
