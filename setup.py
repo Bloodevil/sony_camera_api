@@ -8,7 +8,7 @@ here = os.path.abspath(os.path.dirname(__file__))
 
 README = open(os.path.join(here, 'README.md')).read()
 
-version = '0.1.2'
+version = '0.1.3'
 
 install_requires = [
 ]
@@ -20,7 +20,7 @@ setup(name='pysony',
     author='Yeaji Shin',
     author_email='yeahjishin@gmail.com',
     url='https://github.com/Bloodevil/sony_camera_api',
-    download_url='https://github.com/Bloodevil/sony_camera_api/tarball/0.1.1',
+    download_url='https://github.com/Bloodevil/sony_camera_api/tarball/0.1.3',
     license='MIT',
     install_requires=install_requires,
     packages=find_packages('src'),
