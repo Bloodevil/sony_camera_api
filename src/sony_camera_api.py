@@ -457,6 +457,13 @@ class SonyAPI():
     def getAvailableColorSetting(self):
         return self._cmd(method="getAvailableColorSetting")
 
+    def getAvailableApiList(self):
+        return self._cmd(method="getAvailableApiList")
 
+    def getApplicationInfo(self):
+        return self._cmd(method="getApplicationInfo")
+
+    def getVersions(self):
+        return self._cmd(method="getVersions")
 
 
