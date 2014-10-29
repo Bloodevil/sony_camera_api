@@ -1,11 +1,12 @@
-sony_camera_api
+Pysony
 ===============
+python sony camera api
 
 Install
 ====
 using pip:
 
-    pip install sony_camera_api
+    pip install pysony
 
 using repo:
 
@@ -17,7 +18,7 @@ Usage
 
  simple example:
 
-    >>> api = sony_camera_api.SonyAPI()
+    >>> api = pysony.SonyAPI()
     >>> api.getAvailableApiList()
 
 api_list

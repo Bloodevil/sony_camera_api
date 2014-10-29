@@ -13,7 +13,7 @@ version = '0.1.2'
 install_requires = [
 ]
 
-setup(name='sony-camera-api',
+setup(name='pysony',
     version = version,
     description = "Sony Camera Remote API for python",
     long_description = README,
