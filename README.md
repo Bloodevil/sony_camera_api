@@ -2,7 +2,7 @@ sony_camera_api
 ===============
 
 Install
-=====
+====
 using pip:
 
     pip install sony_camera_api
@@ -13,9 +13,15 @@ using repo:
     python setup.py install
 
 Usage
-=====
+====
 
  simple example:
 
     >>> api = sony_camera_api.SonyAPI()
     >>> api.getAvailableApiList()
+
+api_list
+====
+
+ there api list that you can use.
+
