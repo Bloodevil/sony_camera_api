@@ -6,7 +6,10 @@ except ImportError:
 
 here = os.path.abspath(os.path.dirname(__file__))
 
-README = open(os.path.join(here, 'README.md')).read()
+try:
+    README = open(os.path.join(here, 'README.md')).read()
+except:
+    README = 'https://github.com/Bloodevil/sony_camera_api/blob/master/README.md'
 
 version = '0.1.3'
 
