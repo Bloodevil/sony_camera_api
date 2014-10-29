@@ -1,4 +1,4 @@
-from sony_camera_api import SonyAPI
+from pysony import SonyAPI
 import json
 import urllib2
 import socket
