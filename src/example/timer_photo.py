@@ -1,4 +1,4 @@
-from pysony import SonyAPI, pyload_header
+from pysony import SonyAPI, payload_header
 import urllib2
 import thread
 import time
@@ -17,8 +17,13 @@ def view():
 
 def liveview_and_save(timer=5):
     camera = SonyAPI()
-    liveview_url = camera.startLiveview()['result'][0]
-    f = urllib2.urlopen(liveview_url)
+    try:
+        live = camera.startLiveview()
+        liveview_url = live['result'][0]
+        f = urllib2.urlopen(liveview_url)
+    except:
+        print live
+        raise
     photo_num = 1
     time = timer
     while 1:
@@ -35,3 +40,8 @@ def liveview_and_save(timer=5):
         time.sleep(1)
         time = time - 1
 
+
+if __name__ == "__main__":
+    thread.start_new_thread(liveview_and_save, ())
+    if app:
+        app.run()
