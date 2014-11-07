@@ -1,3 +1,5 @@
+<img src="https://travis-ci.org/Bloodevil/sony_camera_api.svg?branch=master"/>
+
 Pysony
 ===============
 python sony camera api
