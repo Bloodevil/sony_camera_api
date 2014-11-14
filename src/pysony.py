@@ -129,11 +129,11 @@ class SonyAPI():
         else:
             self.QX_ADDR = QX_ADDR
         if not params:
-            self.params = collections.OrderedDict([
-            ("method", ""),
-            ("params", []),
-            ("id", 1),  # move to setting
-            ("version", "1.0")])  # move to setting
+            self.params = {
+            "method": "",
+            "params": [],
+            "id": 1,  # move to setting
+            "version": "1.0"}  # move to setting
         else:
             self.params = params
 
@@ -159,9 +159,9 @@ class SonyAPI():
             self.params["params"] = self._truefalse(param)
 
         try:
-            result = eval(urllib2.urlopen(self.QX_ADDR + "/sony/camera", json.dumps(params)).read())
-        except:
-            result = "[ERROR] camera doesn't work"
+            result = eval(urllib2.urlopen(self.QX_ADDR + "/sony/camera", json.dumps(self.params)).read())
+        except Exception as e:
+            result = "[ERROR] camera doesn't work" + str(e)
         return result
 
     def setShootMode(self, param=None):
