@@ -19,24 +19,31 @@ except:
 
 def liveview():
     camera = SonyAPI()
-    liveview_url = camera.startLiveview()['result'][0]
-    f = urllib2.urlopen(liveview_url)   # move to in SonyAPI class.
+
+    # [TODO]
+    # replace liveview function to camera.liveview function.
+    # liveview function will do everything in this liveview function not just a file.
+    f = camera.liveview()
 
     if not os.path.exists("./static"):
         os.makedirs("./static")
 
     while 1:
+        # read f size and control.
         data = f.read(8)
         data = f.read(128)
         payload = payload_header(data)
         # [TODO] when debug mode, print payload for debug
         # if app.config('DEBUG'):
         #     print payload
-        test = open('./static/test.jpg', 'w')
-        test.write(f.read(payload['jpeg_data_size']))
-        test.close()
-        f.read(payload['padding_size'])
-        time.sleep(0.2)
+        try:
+            test = open('./static/test.jpg', 'w')
+            # wait until get pyload jpeg data size.
+            test.write(f.read(payload['jpeg_data_size']))
+            test.close()
+            f.read(payload['padding_size'])
+        except:
+            time.sleep(0.1)
 
 if __name__ == "__main__":
     thread.start_new_thread(liveview, ())

@@ -164,6 +164,14 @@ class SonyAPI():
             result = "[ERROR] camera doesn't work" + str(e)
         return result
 
+    def liveview(self, param=None):
+        if not param:
+            liveview_url = self._cmd(method="startLiveview")['result'][0]
+        else:
+            liveview_url = self._cmd(method="startLiveviewWithSize")['result'][0]
+        f = urllib2.urlopen(liveview_url)
+        return f
+
     def setShootMode(self, param=None):
         if not param:
             print """[ERROR] please enter the param like below
