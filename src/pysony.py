@@ -166,10 +166,13 @@ class SonyAPI():
 
     def liveview(self, param=None):
         if not param:
-            liveview_url = self._cmd(method="startLiveview")['result'][0]
+            liveview = self._cmd(method="startLiveview")
         else:
-            liveview_url = self._cmd(method="startLiveviewWithSize")['result'][0]
-        f = urllib2.urlopen(liveview_url)
+            liveview = self._cmd(method="startLiveviewWithSize")
+        try:
+            f = urllib2.urlopen(liveview['result'][0])
+        except:
+            f = liveview
         return f
 
     def setShootMode(self, param=None):

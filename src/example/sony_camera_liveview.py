@@ -3,6 +3,7 @@ from pysony import SonyAPI, payload_header
 import urllib2
 import thread
 import time
+import os
 try:
     from flask import Flask, url_for
     app = Flask(__name__)
@@ -44,6 +45,7 @@ def liveview():
             f.read(payload['padding_size'])
         except:
             time.sleep(0.1)
+        time.sleep(0.1)
 
 if __name__ == "__main__":
     thread.start_new_thread(liveview, ())
