@@ -139,6 +139,8 @@ class SonyAPI():
 
     def _truefalse(self, param):
         params = []
+        if type(param) != list:
+            param = [param]
         for x in param:
             if x.lower() == 'true':
                 params.append(True)
