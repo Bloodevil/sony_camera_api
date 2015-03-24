@@ -321,6 +321,12 @@ class SonyAPI():
     def setTvColorSystem(self, param=None):
         return self._cmd(method="setTvColorSystem", param=param)
 
+    def startRecMode(self):
+        return self._cmd(method="startRecMode")
+
+    def stopRecMode(self):
+        return self._cmd(method="stopRecMode")
+
     def setCameraFunction(self, param=None):
         return self._cmd(method="setCameraFunction", param=param)
 
