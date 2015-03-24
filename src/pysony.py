@@ -157,6 +157,8 @@ class SonyAPI():
             self.params["method"] = method
         if param:
             self.params["params"] = self._truefalse(param)
+        else:
+            self.params["params"] = []
 
         try:
             result = eval(urllib2.urlopen(self.QX_ADDR + "/sony/camera", json.dumps(self.params)).read())
