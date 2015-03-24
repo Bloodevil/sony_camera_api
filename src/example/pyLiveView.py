@@ -223,7 +223,13 @@ class liveview_display:
       gtk.gdk.threads_enter()
       pixbuf.copy_area(0, 0, display.width, display.height, 
          self.offscreen, 0, 0)
-   
+
+      # Report status
+      if grabber.active:
+          display.bartext.set_text("Recording")
+      else:
+          display.bartext.set_text("")
+
       # Force an 'expose' event for screen
       display.expose_event(display.drawing_area, None)
       gtk.gdk.threads_leave()
@@ -304,6 +310,12 @@ class liveview_display:
          self.offscreen = gtk.gdk.Pixbuf(gtk.gdk.COLORSPACE_RGB, False, 8, 
             self.width, self.height)
          self.offscreen.fill(0x000000FF)
+
+         # Text box to display status
+         self.bartext = gtk.Label()
+         self.bartext.set_single_line_mode(True)
+         self.bartext.show()
+         vbox.add(self.bartext)
 
          # a horizontal box to hold the buttons
          hbox = gtk.HBox()
