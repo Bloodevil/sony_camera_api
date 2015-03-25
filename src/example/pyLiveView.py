@@ -85,14 +85,22 @@ class liveview_grabber(threading.Thread):
 
       # Ensure that we're in 'Movie' mode
       mode = camera.getAvailableShootMode()
-      if (mode['result'])[0] != 'movie':
-         if 'movie' in (mode['result'])[1]:
-            camera.setShootMode(["movie"])
+      if type(mode) == dict:
+         if (mode['result'])[0] != 'movie':
+            if 'movie' in (mode['result'])[1]:
+               camera.setShootMode(["movie"])
+            else:
+               print "'movie' mode not supported"
 
-            # Force wait for camera to be ready
-            camera.getEvent(["true"])
-         else:
-            print "'movie' mode not supported"
+      # Wait for camera to be ready and check whether we're recoding
+      mode = camera.getEvent(["true"])
+      if options.debug:
+         print "Event:", mode
+      if type(mode) == dict:
+         status = mode['result'][1]
+         if status['cameraStatus'] == 'MovieRecording':
+            self.active = True
+            self.start_time = datetime.datetime.now()
 
       incoming = camera.liveview()
 
@@ -143,7 +151,8 @@ class liveview_grabber(threading.Thread):
             self.start_time = datetime.datetime.now()
             self.event_start_stream.clear()
 
-            # loop until request to stop
+         # loop until request to stop
+         if self.active == True:
             while not self.event_stop_stream.isSet():
                if options.gui == True :
                   # read next image
@@ -212,7 +221,8 @@ class liveview_grabber(threading.Thread):
       if options.debug:
          print "terminating..."
 
-      self.stop_stream()
+      if options.gui != True:
+         self.stop_stream()
       self.event_terminate.set()
 
       while self.event_terminate.isSet():
