@@ -38,7 +38,7 @@ def liveview():
         # if app.config('DEBUG'):
         #     print payload
         try:
-            test = open('./static/test.jpg', 'w')
+            test = open('./static/test.jpg', 'wb')
             # wait until get pyload jpeg data size.
             test.write(f.read(payload['jpeg_data_size']))
             test.close()

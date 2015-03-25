@@ -159,6 +159,8 @@ class SonyAPI():
             self.params["method"] = method
         if param:
             self.params["params"] = self._truefalse(param)
+        else:
+            self.params["params"] = []
 
         try:
             result = eval(urllib2.urlopen(self.QX_ADDR + "/sony/camera", json.dumps(self.params)).read())
@@ -323,6 +325,12 @@ class SonyAPI():
     def setTvColorSystem(self, param=None):
         return self._cmd(method="setTvColorSystem", param=param)
 
+    def startRecMode(self):
+        return self._cmd(method="startRecMode")
+
+    def stopRecMode(self):
+        return self._cmd(method="stopRecMode")
+
     def setCameraFunction(self, param=None):
         return self._cmd(method="setCameraFunction", param=param)
 
@@ -331,6 +339,9 @@ class SonyAPI():
 
     def getContentCount(self, param=None):
         return self._cmd(method="getContentCount", param=param)
+
+    def getEvent(self, param=None):
+        return self._cmd(method="getEvent", param=param)
 
     def getShootMode(self):
         return self._cmd(method="getShootMode")
