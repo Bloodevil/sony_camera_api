@@ -65,11 +65,32 @@ class liveview_grabber(threading.Thread):
 
       camera = SonyAPI()
 
+      # Check if we need to do 'startRecMode'
+      mode = camera.getAvailableApiList()
+
+      # Need a better method to check for the presence of a camera
+      if type(mode) != dict:
+         print "No camera found, aborting"
+         display.terminate_clicked()
+         self.event_terminated.set()
+         return
+
+      if options.debug:
+         print "Versions:", camera.getVersions()
+         print "API List:", mode
+
+      # For those cameras which need it
+      if 'startRecMode' in (mode['result'])[0]:
+         camera.startRecMode()
+
       # Ensure that we're in 'Movie' mode
       mode = camera.getAvailableShootMode()
       if (mode['result'])[0] != 'movie':
          if 'movie' in (mode['result'])[1]:
             camera.setShootMode(["movie"])
+
+            # Force wait for camera to be ready
+            camera.getEvent(["true"])
          else:
             print "'movie' mode not supported"
 
