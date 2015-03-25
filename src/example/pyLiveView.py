@@ -14,6 +14,10 @@ import Image
 import io
 from pysony import SonyAPI, payload_header
 
+# Hack for windows
+import platform
+from cStringIO import StringIO
+
 try:
    import pygtk
    import gtk
@@ -237,7 +241,10 @@ class liveview_display:
       global options, grabber, display
 
       # Convert a PIL Image to a gtk.gdk.Pixbuf  
-      file1 = io.BytesIO()  
+      if (platform.system() == 'Linux'):
+         file1 = io.BytesIO()
+      else:
+         file1 = StringIO()
       if (file1 != False):
          image.save(file1, "ppm")  
          contents = file1.getvalue()  
