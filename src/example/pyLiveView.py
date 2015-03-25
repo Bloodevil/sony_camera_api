@@ -380,7 +380,7 @@ class liveview_display:
       grabber = liveview_grabber()
       grabber.start()
 
-      if options.autostart:
+      if options.autostart or options.gui != True:
          time.sleep(1)
          grabber.start_stream()
 
