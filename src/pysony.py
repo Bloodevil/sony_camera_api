@@ -338,6 +338,9 @@ class SonyAPI():
     def getContentCount(self, param=None):
         return self._cmd(method="getContentCount", param=param)
 
+    def getEvent(self, param=None):
+        return self._cmd(method="getEvent", param=param)
+
     def getShootMode(self):
         return self._cmd(method="getShootMode")
 
