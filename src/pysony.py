@@ -313,8 +313,14 @@ class SonyAPI():
     def setFlashMode(self, param=None):
         return self._cmd(method="setFlashMode", param=param)
 
+    def setAutoPowerOff(self, param=None):
+        return self._cmd(method="setAutoPowerOff", param=param)
+
     def setBeepMode(self, param=None):
         return self._cmd(method="setBeepMode", param=param)
+
+    def setCurrentTime(self, param=None):
+        return self._cmd(method="setCurrentTime", param=param)
 
     def setStillSize(self, param=None):
         return self._cmd(method="setStillSize", param=param)
@@ -346,6 +352,9 @@ class SonyAPI():
     def setIntervalTime(self, param=None):
         return self._cmd(method="setIntervalTime", param=param)
 
+    def setLoopTime(self, param=None):
+        return self._cmd(method="setLoopTime", param=param)
+
     def setFlipSetting(self, param=None):
         return self._cmd(method="setFlipSetting", param=param)
 
@@ -367,8 +376,20 @@ class SonyAPI():
     def getAvailableCameraFunction(self):
         return self._cmd(method="getAvailableCameraFunction")
 
+    def getAudioRecording(self):
+        return self._cmd(method="getAudioRecording")
+
+    def getSupportedAudioRecording(self):
+        return self._cmd(method="getSupportedAudioRecording")
+
+    def getAvailableAudioRecording(self):
+        return self._cmd(method="getAvailableAudioRecording")
+
     def setCameraFunction(self, param=None):
         return self._cmd(method="setCameraFunction", param=param)
+
+    def setAudioRecording(self, param=None):
+        return self._cmd(method="setAudioRecording", param=param)
 
     def getSourceList(self, param=None):
         return self._content(method="getSourceList", param=param)
@@ -391,8 +412,14 @@ class SonyAPI():
     def deleteContent(self, param=None):
         return self._content(method="deleteContent", param=param)
 
+    def setInfraredRemoteControl(self, param=None):
+        return self._cmd(method="setInfraredRemoteControl", param=param)
+
     def getEvent(self, param=None):
         return self._cmd(method="getEvent", param=param)
+
+    def getMethodTypes(self, param=None): # camera, system and avContent
+        return self._cmd(method="getMethodTypes", param=param)
 
     def getShootMode(self):
         return self._cmd(method="getShootMode")
@@ -405,12 +432,6 @@ class SonyAPI():
 
     def actTakePicture(self):
         return self._cmd(method="actTakePicture")
-
-    def actHalfPressShutter(self):
-        return self._cmd(method="actHalfPressShutter")
-
-    def cancelHalfPressShutter(self):
-        return self._cmd(method="cancelHalfPressShutter")
 
     def awaitTakePicture(self):
         return self._cmd(method="awaitTakePicture")
@@ -426,6 +447,12 @@ class SonyAPI():
 
     def stopMovieRec(self):
         return self._cmd(method="stopMovieRec")
+
+    def startLoopRec(self):
+        return self._cmd(method="startLoopRec")
+
+    def stopLoopRec(self):
+        return self._cmd(method="stopLoopRec")
 
     def startAudioRec(self):
         return self._cmd(method="startAudioRec")
@@ -453,6 +480,24 @@ class SonyAPI():
 
     def getAvailableLiveviewSize(self):
         return self._cmd(method="getAvailableLiveviewSize")
+
+    def getLiveviewFrameInfo(self):
+        return self._cmd(method="getLiveviewFrameInfo")
+
+    def getZoomSetting(self):
+        return self._cmd(method="getZoomSetting")
+
+    def getSupportedZoomSetting(self):
+        return self._cmd(method="getSupportedZoomSetting")
+
+    def getAvailableZoomSetting(self):
+        return self._cmd(method="getAvailableZoomSetting")
+
+    def actHalfPressShutter(self):
+        return self._cmd(method="actHalfPressShutter")
+
+    def cancelHalfPressShutter(self):
+        return self._cmd(method="cancelHalfPressShutter")
 
     def getTouchAFPosition(self):
         return self._cmd(method="getTouchAFPosition")
@@ -562,6 +607,9 @@ class SonyAPI():
     def getAvailableWhiteBalance(self):
         return self._cmd(method="getAvailableWhiteBalance")
 
+    def actWhiteBalanceOnePushCustom(self):
+        return self._cmd(method="actWhiteBalanceOnePushCustom")
+
     def getSupportedProgramShift(self):
         return self._cmd(method="getSupportedProgramShift")
 
@@ -654,6 +702,33 @@ class SonyAPI():
 
     def getAvailableColorSetting(self):
         return self._cmd(method="getAvailableColorSetting")
+
+    def getIntervalTime(self):
+        return self._cmd(method="getIntervalTime")
+
+    def getSupportedIntervalTime(self):
+        return self._cmd(method="getSupportedIntervalTime")
+
+    def getAvailableIntervalTime(self):
+        return self._cmd(method="getAvailableIntervalTime")
+
+    def getFlipSetting(self):
+        return self._cmd(method="getFlipSetting")
+
+    def getSupportedFlipSetting(self):
+        return self._cmd(method="getSupportedFlipSetting")
+
+    def getAvailableFlipSetting(self):
+        return self._cmd(method="getAvailableFlipSetting")
+
+    def getTvColorSystem(self):
+        return self._cmd(method="getTvColorSystem")
+
+    def getSupportedTvColorSystem(self):
+        return self._cmd(method="getSupportedTvColorSystem")
+
+    def getAvailableTvColorSystem(self):
+        return self._cmd(method="getAvailableTvColorSystem")
 
     def startStreaming(self):
         return self._content(method="startStreaming")
