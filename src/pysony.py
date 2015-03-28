@@ -352,6 +352,9 @@ class SonyAPI():
     def setIntervalTime(self, param=None):
         return self._cmd(method="setIntervalTime", param=param)
 
+    def setLoopRecTime(self, param=None):
+        return self._cmd(method="setLoopRecTime", param=param)
+
     def setLoopTime(self, param=None):
         return self._cmd(method="setLoopTime", param=param)
 
@@ -385,11 +388,23 @@ class SonyAPI():
     def getAvailableAudioRecording(self):
         return self._cmd(method="getAvailableAudioRecording")
 
+    def getWindNoiseReduction(self):
+        return self._cmd(method="getWindNoiseReduction")
+
+    def getSupportedWindNoiseReduction(self):
+        return self._cmd(method="getSupportedWindNoiseReduction")
+
+    def getAvailableWindNoiseReduction(self):
+        return self._cmd(method="getAvailableWindNoiseReduction")
+
     def setCameraFunction(self, param=None):
         return self._cmd(method="setCameraFunction", param=param)
 
     def setAudioRecording(self, param=None):
         return self._cmd(method="setAudioRecording", param=param)
+
+    def setWindNoiseReduction(self, param=None):
+        return self._cmd(method="setWindNoiseReduction", param=param)
 
     def getSourceList(self, param=None):
         return self._content(method="getSourceList", param=param)
@@ -711,6 +726,15 @@ class SonyAPI():
 
     def getAvailableIntervalTime(self):
         return self._cmd(method="getAvailableIntervalTime")
+
+    def getLoopRecTime(self):
+        return self._cmd(method="getLoopRecTime")
+
+    def getSupportedLoopRecTime(self):
+        return self._cmd(method="getSupportedLoopRecTime")
+
+    def getAvailableLoopRecTime(self):
+        return self._cmd(method="getAvailableLoopRecTime")
 
     def getFlipSetting(self):
         return self._cmd(method="getFlipSetting")
