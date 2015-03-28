@@ -150,6 +150,24 @@ class SonyAPI():
                 params.append(x)
         return params
 
+    def _content(self, method=None, param=[]):
+        true = True
+        false = False
+        null = None
+
+        if method:
+            self.params["method"] = method
+        if param:
+            self.params["params"] = self._truefalse(param)
+        else:
+            self.params["params"] = []
+
+        try:
+            result = eval(urllib2.urlopen(self.QX_ADDR + "/sony/avContent", json.dumps(self.params)).read())
+        except Exception as e:
+            result = "[ERROR] camera doesn't work" + str(e)
+        return result
+
     def _cmd(self, method=None, param=[]):
         true = True
         false = False
@@ -353,10 +371,25 @@ class SonyAPI():
         return self._cmd(method="setCameraFunction", param=param)
 
     def getSourceList(self, param=None):
-        return self._cmd(method="getSourceList", param=param)
+        return self._content(method="getSourceList", param=param)
 
     def getContentCount(self, param=None):
-        return self._cmd(method="getContentCount", param=param)
+        return self._content(method="getContentCount", param=param)
+
+    def getContentList(self, param=None):
+        return self._content(method="getContentList", param=param)
+
+    def setStreamingContent(self, param=None):
+        return self._content(method="setStreamingContent", param=param)
+
+    def seekStreamingPosition(self, param=None):
+        return self._content(method="seekStreamingPosition", param=param)
+
+    def requestToNotifyStreamingStatus(self, param=None):
+        return self._content(method="requestToNotifyStreamingStatus", param=param)
+
+    def deleteContent(self, param=None):
+        return self._content(method="deleteContent", param=param)
 
     def getEvent(self, param=None):
         return self._cmd(method="getEvent", param=param)
@@ -622,6 +655,33 @@ class SonyAPI():
     def getAvailableColorSetting(self):
         return self._cmd(method="getAvailableColorSetting")
 
+    def startStreaming(self):
+        return self._content(method="startStreaming")
+
+    def pauseStreaming(self):
+        return self._content(method="pauseStreaming")
+
+    def stopStreaming(self):
+        return self._content(method="stopStreaming")
+
+    def getSupportedInfraredRemoteControl(self):
+        return self._content(method="getSupportedInfraredRemoteControl")
+
+    def getAvailableInfraredRemoteControl(self):
+        return self._content(method="getAvailableInfraredRemoteControl")
+
+    def getInfraredRemoteControl(self):
+        return self._content(method="getInfraredRemoteControl")
+
+    def getAutoPowerOff(self):
+        return self._cmd(method="getAutoPowerOff")
+
+    def getSupportedAutoPowerOff(self):
+        return self._cmd(method="getSupportedAutoPowerOff")
+
+    def getAvailableAutoPowerOff(self):
+        return self._cmd(method="getAvailableAutoPowerOff")
+
     def getBeepMode(self):
         return self._cmd(method="getBeepMode")
 
@@ -630,6 +690,9 @@ class SonyAPI():
 
     def getAvailableBeepMode(self):
         return self._cmd(method="getAvailableBeepMode")
+
+    def getSchemeList(self):
+        return self._content(method="getSchemeList")
 
     def getStorageInformation(self):
         return self._cmd(method="getStorageInformation")
