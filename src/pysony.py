@@ -150,7 +150,7 @@ class SonyAPI():
                 params.append(x)
         return params
 
-    def _content(self, method=None, param=[]):
+    def _cmd(self, method=None, param=[], target=None):
         true = True
         false = False
         null = None
@@ -163,25 +163,10 @@ class SonyAPI():
             self.params["params"] = []
 
         try:
-            result = eval(urllib2.urlopen(self.QX_ADDR + "/sony/avContent", json.dumps(self.params)).read())
-        except Exception as e:
-            result = "[ERROR] camera doesn't work" + str(e)
-        return result
-
-    def _cmd(self, method=None, param=[]):
-        true = True
-        false = False
-        null = None
-
-        if method:
-            self.params["method"] = method
-        if param:
-            self.params["params"] = self._truefalse(param)
-        else:
-            self.params["params"] = []
-
-        try:
-            result = eval(urllib2.urlopen(self.QX_ADDR + "/sony/camera", json.dumps(self.params)).read())
+            if target:
+                result = eval(urllib2.urlopen(self.QX_ADDR + "/sony/" + target, json.dumps(self.params)).read())
+            else:
+                result = eval(urllib2.urlopen(self.QX_ADDR + "/sony/camera", json.dumps(self.params)).read())
         except Exception as e:
             result = "[ERROR] camera doesn't work" + str(e)
         return result
@@ -320,7 +305,7 @@ class SonyAPI():
         return self._cmd(method="setBeepMode", param=param)
 
     def setCurrentTime(self, param=None):
-        return self._cmd(method="setCurrentTime", param=param)
+        return self._cmd(method="setCurrentTime", param=param, target="system")
 
     def setStillSize(self, param=None):
         return self._cmd(method="setStillSize", param=param)
@@ -354,9 +339,6 @@ class SonyAPI():
 
     def setLoopRecTime(self, param=None):
         return self._cmd(method="setLoopRecTime", param=param)
-
-    def setLoopTime(self, param=None):
-        return self._cmd(method="setLoopTime", param=param)
 
     def setFlipSetting(self, param=None):
         return self._cmd(method="setFlipSetting", param=param)
@@ -407,25 +389,25 @@ class SonyAPI():
         return self._cmd(method="setWindNoiseReduction", param=param)
 
     def getSourceList(self, param=None):
-        return self._content(method="getSourceList", param=param)
+        return self._cmd(method="getSourceList", param=param, target="avContent")
 
     def getContentCount(self, param=None):
-        return self._content(method="getContentCount", param=param)
+        return self._cmd(method="getContentCount", param=param, target="avContent")
 
     def getContentList(self, param=None):
-        return self._content(method="getContentList", param=param)
+        return self._cmd(method="getContentList", param=param, target="avContent")
 
     def setStreamingContent(self, param=None):
-        return self._content(method="setStreamingContent", param=param)
+        return self._cmd(method="setStreamingContent", param=param, target="avContent")
 
     def seekStreamingPosition(self, param=None):
-        return self._content(method="seekStreamingPosition", param=param)
+        return self._cmd(method="seekStreamingPosition", param=param, target="avContent")
 
     def requestToNotifyStreamingStatus(self, param=None):
-        return self._content(method="requestToNotifyStreamingStatus", param=param)
+        return self._cmd(method="requestToNotifyStreamingStatus", param=param, target="avContent")
 
     def deleteContent(self, param=None):
-        return self._content(method="deleteContent", param=param)
+        return self._cmd(method="deleteContent", param=param, target="avContent")
 
     def setInfraredRemoteControl(self, param=None):
         return self._cmd(method="setInfraredRemoteControl", param=param)
@@ -433,8 +415,8 @@ class SonyAPI():
     def getEvent(self, param=None):
         return self._cmd(method="getEvent", param=param)
 
-    def getMethodTypes(self, param=None): # camera, system and avContent
-        return self._cmd(method="getMethodTypes", param=param)
+    def getMethodTypes(self, param=None, target=None): # camera, system and avContent
+        return self._cmd(method="getMethodTypes", param=param, target=None)
 
     def getShootMode(self):
         return self._cmd(method="getShootMode")
@@ -755,22 +737,22 @@ class SonyAPI():
         return self._cmd(method="getAvailableTvColorSystem")
 
     def startStreaming(self):
-        return self._content(method="startStreaming")
+        return self._cmd(method="startStreaming", target="avContent")
 
     def pauseStreaming(self):
-        return self._content(method="pauseStreaming")
+        return self._cmd(method="pauseStreaming", target="avContent")
 
     def stopStreaming(self):
-        return self._content(method="stopStreaming")
-
-    def getSupportedInfraredRemoteControl(self):
-        return self._content(method="getSupportedInfraredRemoteControl")
-
-    def getAvailableInfraredRemoteControl(self):
-        return self._content(method="getAvailableInfraredRemoteControl")
+        return self._cmd(method="stopStreaming", target="avContent")
 
     def getInfraredRemoteControl(self):
-        return self._content(method="getInfraredRemoteControl")
+        return self._cmd(method="getInfraredRemoteControl")
+
+    def getSupportedInfraredRemoteControl(self):
+        return self._cmd(method="getSupportedInfraredRemoteControl")
+
+    def getAvailableInfraredRemoteControl(self):
+        return self._cmd(method="getAvailableInfraredRemoteControl")
 
     def getAutoPowerOff(self):
         return self._cmd(method="getAutoPowerOff")
@@ -791,7 +773,7 @@ class SonyAPI():
         return self._cmd(method="getAvailableBeepMode")
 
     def getSchemeList(self):
-        return self._content(method="getSchemeList")
+        return self._cmd(method="getSchemeList", target="avContent")
 
     def getStorageInformation(self):
         return self._cmd(method="getStorageInformation")
@@ -805,7 +787,7 @@ class SonyAPI():
     def getApplicationInfo(self):
         return self._cmd(method="getApplicationInfo")
 
-    def getVersions(self):
-        return self._cmd(method="getVersions")
+    def getVersions(self, target=None):
+        return self._cmd(method="getVersions", target=target)
 
 
