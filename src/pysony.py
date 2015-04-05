@@ -155,6 +155,11 @@ class SonyAPI():
         false = False
         null = None
 
+        if not method in ["getAvailableApiList", "liveview"]:
+            camera_api_list = self.getAvailableApiList()["result"][0]
+            if method not in camera_api_list:
+                return "[ERROR] this api is not support in this camera"
+
         if method:
             self.params["method"] = method
         if param:
