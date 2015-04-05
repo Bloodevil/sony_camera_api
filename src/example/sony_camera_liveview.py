@@ -29,7 +29,7 @@ def liveview():
     if not os.path.exists("./static"):
         os.makedirs("./static")
 
-    while 1:
+    while True:
         # read f size and control.
         data = f.read(8)
         data = f.read(128)
@@ -38,14 +38,14 @@ def liveview():
         # if app.config('DEBUG'):
         #     print payload
         try:
+            payload = f.read(payload['jpeg_data_size'])
             test = open('./static/test.jpg', 'wb')
             # wait until get pyload jpeg data size.
-            test.write(f.read(payload['jpeg_data_size']))
+            test.write(payload)
             test.close()
             f.read(payload['padding_size'])
         except:
-            time.sleep(0.1)
-        time.sleep(0.1)
+            time.sleep(0.05)
 
 if __name__ == "__main__":
     thread.start_new_thread(liveview, ())
