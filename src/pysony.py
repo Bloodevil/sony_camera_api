@@ -30,6 +30,7 @@ class ControlPoint(object):
                            "MX: " + str(duration),
                            "ST: " + SSDP_ST,
                            "USER-AGENT: ",
+                           "",
                            ""])
 
         # Send the message.
