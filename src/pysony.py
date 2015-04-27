@@ -18,6 +18,7 @@ class ControlPoint(object):
 
     def __bind_sockets(self):
         self.__udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.__udp_socket.settimeout(1)
         return
 
     def discover(self, duration):
@@ -30,6 +31,7 @@ class ControlPoint(object):
                            "MX: " + str(duration),
                            "ST: " + SSDP_ST,
                            "USER-AGENT: ",
+                           "",
                            ""])
 
         # Send the message.
@@ -41,7 +43,6 @@ class ControlPoint(object):
     def _listen_for_discover(self, duration):
         start = time.time()
         packets = []
-
         while (time.time() < (start + duration)):
             try:
                 data, addr = self.__udp_socket.recvfrom(1024)
