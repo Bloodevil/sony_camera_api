@@ -29,8 +29,13 @@ def liveview():
     if not os.path.exists("./static"):
         os.makedirs("./static")
 
+    pos = 0
     while True:
         # read f size and control.
+	if f.size() - pos < 136:
+	    continue
+        else:
+	    pos += 136
         data = f.read(8)
         data = f.read(128)
         payload = payload_header(data)
@@ -44,8 +49,8 @@ def liveview():
             test.write(payload)
             test.close()
             f.read(payload['padding_size'])
-        except:
-            time.sleep(0.05)
+        except Exception as e:
+	    print "[ERROR]" + e
 
 if __name__ == "__main__":
     thread.start_new_thread(liveview, ())
