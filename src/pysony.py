@@ -181,12 +181,17 @@ class SonyAPI():
         if not param:
             liveview = self._cmd(method="startLiveview")
         else:
-            liveview = self._cmd(method="startLiveviewWithSize")
-        try:
-            f = urllib2.urlopen(liveview['result'][0])
-        except:
-            f = liveview
-        return f
+            liveview = self._cmd(method="startLiveviewWithSize", param=param)
+        if isinstance(liveview, dict):
+            try:
+                url = liveview['result'][0].replace('\\','')
+                result = urllib2.urlopen(url)
+            except:
+                result = "[ERROR] liveview is dict type but there are no result: " + str(liveview['result'])
+        else:
+            print "[WORN] liveview is not a dict type"
+            result = liveview
+        return result
 
     def setShootMode(self, param=None):
         if not param:
