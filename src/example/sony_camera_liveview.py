@@ -4,9 +4,13 @@ import urllib2
 import thread
 import time
 import os
+
 try:
     from flask import Flask, url_for
     app = Flask(__name__)
+
+    #if you want to see the payload, set Debug = True.
+    app.config['DEBUG'] = False
     @app.route("/")
     def view():
         return """<html>
@@ -32,16 +36,16 @@ def liveview():
     pos = 0
     while True:
         # read f size and control.
-	if f.size() - pos < 136:
-	    continue
+        if f.size() - pos < 136:
+            continue
         else:
-	    pos += 136
+            pos += 136
         data = f.read(8)
         data = f.read(128)
         payload = payload_header(data)
         # [TODO] when debug mode, print payload for debug
-        # if app.config('DEBUG'):
-        #     print payload
+        if app.config('DEBUG'):
+            print payload
         try:
             payload = f.read(payload['jpeg_data_size'])
             test = open('./static/test.jpg', 'wb')
@@ -50,7 +54,7 @@ def liveview():
             test.close()
             f.read(payload['padding_size'])
         except Exception as e:
-	    print "[ERROR]" + e
+            rint "[ERROR]" + e
 
 if __name__ == "__main__":
     thread.start_new_thread(liveview, ())
