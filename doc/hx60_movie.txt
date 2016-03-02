@@ -1,0 +1,77 @@
+Available calls:
+getVersions
+getMethodTypes
+getApplicationInfo
+getAvailableApiList
+getEvent
+stopRecMode
+startMovieRec
+startLiveview
+stopLiveview
+startLiveviewWithSize
+actZoom
+setShootMode
+getShootMode
+getAvailableShootMode
+getSupportedShootMode
+getExposureMode
+getSupportedExposureMode
+getExposureCompensation
+getAvailableExposureCompensation
+getSupportedExposureCompensation
+getFNumber
+getAvailableFNumber
+getSupportedFNumber
+getIsoSpeedRate
+getAvailableIsoSpeedRate
+getSupportedIsoSpeedRate
+getLiveviewSize
+getAvailableLiveviewSize
+getSupportedLiveviewSize
+getShutterSpeed
+getAvailableShutterSpeed
+getSupportedShutterSpeed
+getWhiteBalance
+getSupportedWhiteBalance
+getAvailableWhiteBalance
+getFocusMode
+getAvailableFocusMode
+getSupportedFocusMode
+setZoomSetting
+getAvailableZoomSetting
+getZoomSetting
+getSupportedZoomSetting
+getStorageInformation
+setLiveviewFrameInfo
+getLiveviewFrameInfo
+--
+getSupportedShootMode :
+{'result': [['still', 'movie']], 'id': 1}
+
+getSupportedExposureMode :
+{'result': [['Intelligent Auto']], 'id': 1}
+
+getSupportedExposureCompensation :
+{'result': [[0], [0], [0]], 'id': 1}
+
+getSupportedFNumber :
+{'result': [[]], 'id': 1}
+
+getSupportedIsoSpeedRate :
+{'result': [[]], 'id': 1}
+
+getSupportedLiveviewSize :
+{'result': [['L', 'M']], 'id': 1}
+
+getSupportedShutterSpeed :
+{'result': [[]], 'id': 1}
+
+getSupportedWhiteBalance :
+{'result': [[]], 'id': 1}
+
+getSupportedFocusMode :
+{'result': [['AF-S', 'AF-C']], 'id': 1}
+
+getSupportedZoomSetting :
+{'result': [{'candidate': ['Optical Zoom Only', 'On:Clear Image Zoom', 'On:Digital Zoom']}], 'id': 1}
+
