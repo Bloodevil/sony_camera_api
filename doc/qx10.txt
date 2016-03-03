@@ -1,0 +1,82 @@
+Available calls:
+getMethodTypes
+getAvailableApiList
+setShootMode
+getShootMode
+getSupportedShootMode
+getAvailableShootMode
+setSelfTimer
+getSelfTimer
+getSupportedSelfTimer
+getAvailableSelfTimer
+setPostviewImageSize
+getPostviewImageSize
+getSupportedPostviewImageSize
+getAvailablePostviewImageSize
+startLiveview
+stopLiveview
+actTakePicture
+startMovieRec
+stopMovieRec
+awaitTakePicture
+actZoom
+setExposureMode
+getExposureMode
+getSupportedExposureMode
+getAvailableExposureMode
+setBeepMode
+getBeepMode
+getSupportedBeepMode
+getAvailableBeepMode
+setCameraFunction
+getCameraFunction
+getSupportedCameraFunction
+getAvailableCameraFunction
+setStillSize
+getStillSize
+getSupportedStillSize
+getAvailableStillSize
+actFormatStorage
+getStorageInformation
+setTouchAFPosition
+cancelTouchAFPosition
+getTouchAFPosition
+getSupportedExposureCompensation
+getSupportedWhiteBalance
+getSupportedIsoSpeedRate
+actHalfPressShutter
+cancelHalfPressShutter
+getApplicationInfo
+getVersions
+getEvent
+--
+getSupportedShootMode :
+{'id': 1, 'result': [['still', 'movie']]}
+
+getSupportedSelfTimer :
+{'id': 1, 'result': [[0, 2, 10]]}
+
+getSupportedPostviewImageSize :
+{'id': 1, 'result': [['2M', 'Original']]}
+
+getSupportedExposureMode :
+{'id': 1, 'result': [['Intelligent Auto', 'Superior Auto', 'Program Auto']]}
+
+getSupportedBeepMode :
+{'id': 1, 'result': [['Off', 'On', 'Shutter Only']]}
+
+getSupportedCameraFunction :
+[ERROR] camera doesn't workHTTP Error 403: Forbidden
+
+getSupportedStillSize :
+{'id': 1, 'result': [[{'aspect': '16:9', 'size': '13M'}, {'aspect': '16:9', 'size': '2M'}, {'aspect': '4:3', 'size': '18M'}, {'aspect': '4:3', 'size': '5M'}]]}
+
+getSupportedExposureCompensation :
+{'id': 1, 'result': [[6], [-6], [0]]}
+
+getSupportedWhiteBalance :
+{'id': 1, 'result': [[{'whiteBalanceMode': 'Auto WB', 'colorTemperatureRange': []}, {'whiteBalanceMode': 'Daylight', 'colorTemperatureRange': []}, {'whiteBalanceMode': 'Cloudy', 'colorTemperatureRange': []}, {'whiteBalanceMode': 'Incandescent', 'colorTemperatureRange': []}, {'whiteBalanceMode': 'Fluorescent: Cool White (0)', 'colorTemperatureRange': []}, {'whiteBalanceMode': 'Fluorescent: Day White (+1)', 'colorTemperatureRange': []}, {'whiteBalanceMode': 'Fluorescent: Daylight (+2)', 'colorTemperatureRange': []}]]}
+
+getSupportedIsoSpeedRate :
+{'id': 1, 'result': [['AUTO', '100', '200', '400', '800', '1600', '3200']]}
+

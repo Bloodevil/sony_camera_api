@@ -592,7 +592,7 @@ class SonyAPI():
         return self._cmd(method="getShutterSpeed")
 
     def getSupportedShutterSpeed(self):
-        return self._cmd(method="getSupporedShutterSpeed")
+        return self._cmd(method="getSupportedShutterSpeed")
 
     def getAvailableShutterSpeed(self):
         return self._cmd(method="getAvailableShutterSpeed")

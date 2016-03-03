@@ -54,7 +54,7 @@ def liveview():
             test.close()
             f.read(payload['padding_size'])
         except Exception as e:
-            rint "[ERROR]" + e
+            print "[ERROR]" + e
 
 if __name__ == "__main__":
     thread.start_new_thread(liveview, ())
