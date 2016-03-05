@@ -48,6 +48,7 @@ class liveview_grabber(threading.Thread):
          print "using LiveView grabber"
    
       self.active = False
+      self.photomode = False
 
       # grabber control signals
       self.event_start_stream = threading.Event()
@@ -68,6 +69,7 @@ class liveview_grabber(threading.Thread):
       grabber = self
 
       camera = SonyAPI()
+      #camera = SonyAPI(QX_ADDR='http://192.168.122.1:8080/')
 
       # Check if we need to do 'startRecMode'
       mode = camera.getAvailableApiList()
@@ -87,28 +89,55 @@ class liveview_grabber(threading.Thread):
       if 'startRecMode' in (mode['result'])[0]:
          camera.startRecMode()
 
-      # Ensure that we're in 'Movie' mode
+      # Ensure that we're in correct mode (movie by default)
       mode = camera.getAvailableShootMode()
       if type(mode) == dict:
-         if (mode['result'])[0] != 'movie':
-            if 'movie' in (mode['result'])[1]:
-               camera.setShootMode(["movie"])
+         if options.still:
+            if (mode['result'])[0] != 'still':
+               if 'still' in (mode['result'])[1]:
+                  camera.setShootMode(["still"])
+                  self.photomode = True
             else:
-               print "'movie' mode not supported"
+               self.photomode = True
+         else:
+            if (mode['result'])[0] != 'movie':
+               if 'movie' in (mode['result'])[1]:
+                  camera.setShootMode(["movie"])
+               else:
+                  self.photomode = True
 
-      # Wait for camera to be ready and check whether we're recoding
-      mode = camera.getEvent(["true"])
-      if options.debug:
-         print "Event:", mode
-      if type(mode) == dict:
-         status = mode['result'][1]
-         if status['cameraStatus'] == 'MovieRecording':
-            self.active = True
-            self.start_time = datetime.datetime.now()
-
-      incoming = camera.liveview()
+      if 'getAvailableLiveviewSize' in (mode['result'])[0]:
+         if options.large and len((camera.getAvailableLiveviewSize()['result'])[0]) > 1:
+            incoming = camera.liveview(["L"])
+         else:
+            incoming = camera.liveview()
+      else:
+         incoming = camera.liveview()
 
       while not self.event_terminate.isSet():
+         # Handle events from the camera (record start/stop)
+         if self.frame_count % 10 == 0:
+            mode = camera.getEvent(["false"])
+         else:
+            mode = None
+
+         if mode and type(mode) == dict:
+            status = mode['result'][1]
+            if self.active == False and status['cameraStatus'] == 'MovieRecording':
+               self.frame_count = 0
+               self.start_time = datetime.datetime.now()
+               self.active = True
+               if options.debug:
+                  print "started capture"
+            elif self.active == True and status['cameraStatus'] == 'IDLE':
+               self.active = False
+               self.end_time = datetime.datetime.now()
+               if options.debug:
+                  elapsed = self.end_time - self.start_time
+                  print "Stopped capture: frames = ", self.frame_count,
+                  print ", delta = ", elapsed.seconds + (float(elapsed.microseconds) / 1000000),
+                  print ", fps = ", self.frame_count / (elapsed.seconds + (float(elapsed.microseconds) / 1000000))
+
          if options.gui == True :
             # read next image
             data = incoming.read(8)
@@ -117,16 +146,6 @@ class liveview_grabber(threading.Thread):
             image_file = io.BytesIO(incoming.read(payload['jpeg_data_size']))
             incoming_image = Image.open(image_file)
             incoming.read(payload['padding_size'])
-
-            # set initial width/height
-            if display.offscreen == None:
-               display.width = (incoming_image.size)[0]
-               display.height = (incoming_image.size)[1]
-               if options.debug:
-                  print "Display set to",(incoming_image.size)[0],"x", (incoming_image.size)[1]
-
-               display.offscreen = gtk.gdk.Pixbuf(gtk.gdk.COLORSPACE_RGB, False, 8,
-                  display.width, display.height)
 
             # Correct display size if changed
             if ((incoming_image.size)[0] != display.width):
@@ -147,47 +166,20 @@ class liveview_grabber(threading.Thread):
             image_copy = incoming_image.convert("RGB")
             display.copy_to_offscreen(image_copy)
 
-         if self.event_start_stream.isSet():
-            camera.startMovieRec()
-            self.frame_count = 0
+         # count frames
+         self.frame_count = self.frame_count + 1
 
-            # and we're ready to go..
-            self.start_time = datetime.datetime.now()
+         # handle events
+         if self.event_start_stream.isSet():
+            if self.photomode == True:
+               camera.actTakePicture()
+            else:
+               camera.startMovieRec()
             self.event_start_stream.clear()
 
-         # loop until request to stop
-         if self.active == True:
-            while not self.event_stop_stream.isSet():
-               if options.gui == True :
-                  # read next image
-                  data = incoming.read(8)
-                  data = incoming.read(128)
-                  payload = payload_header(data)
-                  image_file = io.BytesIO(incoming.read(payload['jpeg_data_size']))
-                  incoming_image = Image.open(image_file)
-                  incoming.read(payload['padding_size'])
-
-                  image_copy = incoming_image.convert("RGB")
-                  display.copy_to_offscreen(image_copy)
-
-                  # copy image to the display
-                  display.offscreen = gtk.gdk.Pixbuf(gtk.gdk.COLORSPACE_RGB, False, 8, 
-                     display.width, display.height * 2)
-                  display.copy_to_offscreen(image_copy)
-  
-               self.frame_count = self.frame_count + 1
-
-               if self.event_terminate.isSet():
-                  break
-
          if self.event_stop_stream.isSet():
-            # clean up
             camera.stopMovieRec()
-            self.end_time = datetime.datetime.now()
             self.event_stop_stream.clear()
-            self.active = False
-
-         time.sleep(0.1)
 
       # declare that we're done...
       self.event_terminated.set()
@@ -196,30 +188,18 @@ class liveview_grabber(threading.Thread):
 
    def start_stream(self):
       if self.active == False:
-         self.active = True 
          self.event_start_stream.set()
          while self.event_start_stream.isSet():
             time.sleep(0.1)
-
-         if options.debug:
-            print "started capture"
 
          self.event_stopped_stream.clear()
 
    def stop_stream(self):
       if self.active == True:
          self.event_stop_stream.set()
-         self.active = False
 
          while self.event_stop_stream.isSet():
             time.sleep(0.1)
-
-         if options.debug:
-            elapsed = self.end_time - self.start_time
-            print "Stopped capture: frames = ", self.frame_count,
-            print ", delta = ", elapsed.seconds + (float(elapsed.microseconds) / 1000000),
-            print ", fps = ", self.frame_count / (elapsed.seconds + (float(elapsed.microseconds) / 1000000))
-
 
    def terminate(self):
       if options.debug:
@@ -393,6 +373,8 @@ def Run():
    # General Options
    parser.set_defaults(debug=None, file=None, width=None, height=None)
    parser.add_argument("-d", "--debug", action="store_true", dest="debug", help="Display additional debug information" )
+   parser.add_argument("-l", "--large", action="store_true", dest="large", help="Use HighRes liveview (if available)" )
+   parser.add_argument("-s", "--still", action="store_true", dest="still", help="Still photo mode" )
 
    # Gui related
    parser.set_defaults(gui=None, autostart=None)
