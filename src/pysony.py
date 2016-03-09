@@ -22,7 +22,7 @@ class ControlPoint(object):
 
     def __bind_sockets(self):
         self.__udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        self.__udp_socket.settimeout(1)
+        self.__udp_socket.settimeout(0.1)
         return
 
     def discover(self, duration):
@@ -44,10 +44,13 @@ class ControlPoint(object):
         # Get the responses.
         packets = self._listen_for_discover(duration)
         endpoints = []
-        for data,addr in packets:
+        for host,addr,data in packets:
             resp = self._parse_ssdp_response(data)
-            endpoint = self._read_device_definition(resp['location'])
-            endpoints.append(endpoint)
+            try:
+                endpoint = self._read_device_definition(resp['location'])
+                endpoints.append(endpoint)
+            except:
+                pass
         return endpoints
 
     def _listen_for_discover(self, duration):
@@ -55,17 +58,19 @@ class ControlPoint(object):
         packets = []
         while (time.time() < (start + duration)):
             try:
-                data, addr = self.__udp_socket.recvfrom(1024)
+                data, (host, port) = self.__udp_socket.recvfrom(1024)
 
                 # Assemble any packets from multiple cameras
                 found = False
-                for seen in packets:
-                    if seen[1] == addr:
-                        seen[0] += data
+                for x in xrange(len(packets)):
+                    ohost, oport, odata = packets[x]
+                    if host == ohost and port == oport:
+                        packets.append((host, port, odata+data))
+                        packets.pop(x)
                         found = True
 
                 if not found:
-                    packets.append((data, addr))
+                    packets.append((host, port, data))
             except:
                 pass
         return packets
@@ -75,9 +80,12 @@ class ControlPoint(object):
         assert lines[0] == 'HTTP/1.1 200 OK'
         headers = {}
         for line in lines[1:]:
-            if len(line):
-                key, val = line.split(': ', 1)
-                headers[key.lower()] = val
+            if line:
+                try:
+                    key, val = line.split(': ', 1)
+                    headers[key.lower()] = val
+                except:
+                    pass
         return headers
 
     def _parse_device_definition(self, doc):
