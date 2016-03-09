@@ -12,7 +12,7 @@ import time
 import argparse
 import Image
 import io
-from pysony import SonyAPI, payload_header
+from pysony import SonyAPI, ControlPoint, payload_header
 
 # Hack for windows
 import platform
@@ -68,8 +68,18 @@ class liveview_grabber(threading.Thread):
       self.frame_count = 0
       grabber = self
 
-      camera = SonyAPI()
-      #camera = SonyAPI(QX_ADDR='http://192.168.122.1:8080/')
+      # Search for available camera
+      if options.debug:
+         print "searching for camera"
+
+      search = ControlPoint()
+      cameras =  search.discover(1)
+
+      if len(cameras):
+         camera = SonyAPI(QX_ADDR=cameras[0])
+      else:
+         print "No camera found, aborting"
+         return
 
       # Check if we need to do 'startRecMode'
       mode = camera.getAvailableApiList()
