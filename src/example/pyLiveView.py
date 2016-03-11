@@ -12,7 +12,7 @@ import time
 import argparse
 import Image
 import io
-from pysony import SonyAPI, payload_header
+from pysony import SonyAPI, common_header, payload_header
 
 # Hack for windows
 import platform
@@ -116,7 +116,7 @@ class liveview_grabber(threading.Thread):
 
       while not self.event_terminate.isSet():
          # Handle events from the camera (record start/stop)
-         if self.frame_count % 10 == 0:
+         if self.frame_count % 50 == 0:
             mode = camera.getEvent(["false"])
          else:
             mode = None
@@ -128,7 +128,7 @@ class liveview_grabber(threading.Thread):
                self.start_time = datetime.datetime.now()
                self.active = True
                if options.debug:
-                  print "started capture"
+                  print "started capture", self.start_time
             elif self.active == True and status['cameraStatus'] == 'IDLE':
                self.active = False
                self.end_time = datetime.datetime.now()
@@ -138,15 +138,16 @@ class liveview_grabber(threading.Thread):
                   print ", delta = ", elapsed.seconds + (float(elapsed.microseconds) / 1000000),
                   print ", fps = ", self.frame_count / (elapsed.seconds + (float(elapsed.microseconds) / 1000000))
 
-         if options.gui == True :
-            # read next image
-            data = incoming.read(8)
-            data = incoming.read(128)
-            payload = payload_header(data)
-            image_file = io.BytesIO(incoming.read(payload['jpeg_data_size']))
-            incoming_image = Image.open(image_file)
-            incoming.read(payload['padding_size'])
+         # read next image
+         data = incoming.read(8)
+         common = common_header(data)
+         data = incoming.read(128)
+         payload = payload_header(data)
+         image_file = io.BytesIO(incoming.read(payload['jpeg_data_size']))
+         incoming_image = Image.open(image_file)
+         incoming.read(payload['padding_size'])
 
+         if options.gui == True :
             # Correct display size if changed
             if ((incoming_image.size)[0] != display.width):
                if options.debug:
@@ -166,6 +167,9 @@ class liveview_grabber(threading.Thread):
             image_copy = incoming_image.convert("RGB")
             display.copy_to_offscreen(image_copy)
 
+         if options.debug:
+            print "Frame:", common['sequence_number'], common['time_stemp'], datetime.datetime.now()
+
          # count frames
          self.frame_count = self.frame_count + 1
 
@@ -180,6 +184,9 @@ class liveview_grabber(threading.Thread):
          if self.event_stop_stream.isSet():
             camera.stopMovieRec()
             self.event_stop_stream.clear()
+
+         # give OS a breather
+         time.sleep(0.01)
 
       # declare that we're done...
       self.event_terminated.set()
