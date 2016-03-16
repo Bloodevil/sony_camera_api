@@ -143,7 +143,9 @@ class SonyAPI():
         if type(param) != list:
             param = [param]
         for x in param:
-            if x.lower() == 'true':
+            if type(x) == dict:
+                params.append(x)
+            elif x.lower() == 'true':
                 params.append(True)
             elif x.lower() == 'false':
                 params.append(False)
