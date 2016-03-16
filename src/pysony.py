@@ -143,12 +143,15 @@ class SonyAPI():
         if type(param) != list:
             param = [param]
         for x in param:
-            if x.lower() == 'true':
-                params.append(True)
-            elif x.lower() == 'false':
-                params.append(False)
-            else:
+            if type(x) != str:
                 params.append(x)
+            else:
+                if x.lower() == 'true':
+                    params.append(True)
+                elif x.lower() == 'false':
+                    params.append(False)
+                else:
+                    params.append(x)
         return params
 
     def _cmd(self, method=None, param=[], target=None):
