@@ -203,6 +203,8 @@ class SonyAPI():
             "movie"            Movie shoot mode
             "audio"            Audio shoot mode
             "intervalstill"    Interval still shoot mode
+            e.g) In[26]:  camera.setShootMode(param=['still'])
+                 Out[26]: {'id': 1, 'result': [0]}
             """
         return self._cmd(method="setShootMode", param=param)
 
@@ -224,7 +226,7 @@ class SonyAPI():
         "frameInfo"
                 true - Transfer the liveview frame information
                 false - Not transfer
-        e.g) SonyAPI.setLiveviewFrameInfo(param=[{"frameInfo": true}])
+        e.g) SonyAPI.setLiveviewFrameInfo(param=[{"frameInfo": True}])
         """
         return self._cmd(method="setLiveviewFrameInfo", param=param)
 
