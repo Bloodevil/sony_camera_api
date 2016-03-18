@@ -4,7 +4,7 @@ import sys
 import xml
 import time
 import re
-import requests
+import urllib2
 
 SSDP_ADDR = "239.255.255.250"  # The remote host
 SSDP_PORT = 1900    # The same port as used by the server
@@ -25,7 +25,11 @@ class ControlPoint(object):
         self.__udp_socket.settimeout(0.1)
         return
 
-    def discover(self, duration):
+    def discover(self, duration=None):
+        # Default timeout of 1s
+        if duration==None:
+            duration=1
+
         # Set the socket to broadcast mode.
         self.__udp_socket.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL , 2)
 
@@ -119,8 +123,9 @@ class ControlPoint(object):
         Fetch and parse the device definition, and extract the URL endpoint for
         the camera API service.
         """
-        r = requests.get(url)
-        services = self._parse_device_definition(r.text)
+        r = urllib2.urlopen(url)
+        services = self._parse_device_definition(r.read())
+
         return services['camera']
 
 import collections
