@@ -13,7 +13,7 @@ import argparse
 from PIL import Image, ImageDraw
 import io
 from pysony import SonyAPI, common_header, payload_header
-import binascii
+import struct
 
 # Hack for windows
 import platform
@@ -190,17 +190,20 @@ class liveview_grabber(threading.Thread):
 
                # only recent frame info to image
                if frame_info and frame_sequence >= common['sequence_number']-1 \
-                     and payload['jpeg_data_size']:
-                  left = int(binascii.hexlify(frame_data[0:2]), 16) * display.width / 10000
-                  top = int(binascii.hexlify(frame_data[2:4]), 16) * display.height / 10000
-                  right = int(binascii.hexlify(frame_data[4:6]), 16) * display.width / 10000
-                  bottom = int(binascii.hexlify(frame_data[6:8]), 16) * display.height / 10000
+                     and frame_info['jpeg_data_size']:
+                  for x in range(frame_info['frame_count']):
+                     x = x * frame_info['frame_size']
+                     (left, top, right, bottom) = struct.unpack(">HHHH", frame_data[x:x+8])
+                     left = left * display.width / 10000
+                     top = top * display.height / 10000
+                     right = right * display.width / 10000
+                     bottom = bottom * display.height / 10000
 
-                  dr = ImageDraw.Draw(image_copy)
-                  dr.line((left, top, left, bottom), fill="white", width=3)
-                  dr.line((right, top, right, bottom), fill="white", width=3)
-                  dr.line((left, top, right, top), fill="white", width=3)
-                  dr.line((left, bottom, right, bottom), fill="white", width=3)
+                     dr = ImageDraw.Draw(image_copy)
+                     dr.line((left, top, left, bottom), fill="white", width=3)
+                     dr.line((right, top, right, bottom), fill="white", width=3)
+                     dr.line((left, top, right, top), fill="white", width=3)
+                     dr.line((left, bottom, right, bottom), fill="white", width=3)
 
                display.copy_to_offscreen(image_copy)
 
