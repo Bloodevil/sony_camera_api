@@ -1,7 +1,7 @@
 
 from pysony import SonyAPI, common_header, payload_header
 import argparse
-import binascii
+import struct
 import io
 import pygame
 import os
@@ -114,14 +114,18 @@ while not done:
        screen.blit(incoming_image,(0,0))
 
        if frame_info and frame_sequence >= common['sequence_number']-1 \
-             and payload['jpeg_data_size']:
-          (left, top, width, height) = incoming_image.get_rect()
-          left = int(binascii.hexlify(frame_data[0:2]), 16) * width / 10000
-          top = int(binascii.hexlify(frame_data[2:4]), 16) * height / 10000
-          right = int(binascii.hexlify(frame_data[4:6]), 16) * width / 10000
-          bottom = int(binascii.hexlify(frame_data[6:8]), 16) * height / 10000
+             and frame_info['jpeg_data_size']:
+          for x in range(frame_info['frame_count']):
+             x = x * frame_info['frame_size']
+             (left, top, width, height) = incoming_image.get_rect()
 
-          pygame.draw.lines(screen, 0xffffff, True, \
-             [(left, top), (right, top), (right, bottom), (left, bottom)], 2)
+             (left, top, right, bottom) = struct.unpack(">HHHH", frame_data[x:x+8])
+             left = left * width / 10000
+             top = top * height / 10000
+             right = right * width / 10000
+             bottom = bottom * height / 10000
+
+             pygame.draw.lines(screen, 0xffffff, True, \
+                [(left, top), (right, top), (right, bottom), (left, bottom)], 2)
 
        pygame.display.flip()
