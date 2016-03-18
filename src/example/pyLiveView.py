@@ -12,7 +12,7 @@ import time
 import argparse
 from PIL import Image, ImageDraw
 import io
-from pysony import SonyAPI, common_header, payload_header
+from pysony import SonyAPI, ControlPoint, common_header, payload_header
 import struct
 
 # Hack for windows
@@ -69,8 +69,18 @@ class liveview_grabber(threading.Thread):
       self.frame_count = 0
       grabber = self
 
-      camera = SonyAPI()
-      #camera = SonyAPI(QX_ADDR='http://192.168.122.1:8080/')
+      # Search for available camera
+      if options.debug:
+         print "searching for camera"
+
+      search = ControlPoint()
+      cameras =  search.discover(1)
+
+      if len(cameras):
+         camera = SonyAPI(QX_ADDR=cameras[0])
+      else:
+         print "No camera found, aborting"
+         return
 
       # Check if we need to do 'startRecMode'
       mode = camera.getAvailableApiList()
@@ -82,16 +92,19 @@ class liveview_grabber(threading.Thread):
          self.event_terminated.set()
          return
 
+      # For those cameras which need it
+      if 'startRecMode' in (mode['result'])[0]:
+         camera.startRecMode()
+         time.sleep(5)
+
+         # and re-read capabilities
+         mode = camera.getAvailableApiList()
+
       if options.debug:
          print "Versions:", camera.getVersions()
          print "API List:", mode
 
-      # For those cameras which need it
-      if 'startRecMode' in (mode['result'])[0]:
-         camera.startRecMode()
-
       if 'setLiveviewFrameInfo' in (mode['result'])[0]:
-         print "Checking frame info"
          if options.info:
             camera.setLiveviewFrameInfo([{"frameInfo": True}])
          else:

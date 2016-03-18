@@ -1,7 +1,8 @@
 
-from pysony import SonyAPI, common_header, payload_header
+from pysony import SonyAPI, ControlPoint, common_header, payload_header
 import argparse
 import struct
+import time
 import io
 import pygame
 import os
@@ -25,20 +26,24 @@ parser.add_argument("-z", "--zoom", action="store_true", dest="zoom", help="Zoom
 options = parser.parse_args()
 
 # Connect and set-up camera
-camera = SonyAPI()
-#camera = SonyAPI(QX_ADDR='http://192.168.122.1:8080/')
+search = ControlPoint()
+cameras =  search.discover()
 
-# Check if we need to do 'startRecMode'
-mode = camera.getAvailableApiList()
-
-# Need a better method to check for the presence of a camera
-if type(mode) != dict:
+if len(cameras):
+   camera = SonyAPI(QX_ADDR=cameras[0])
+else:
    print "No camera found, aborting"
    quit()
+
+mode = camera.getAvailableApiList()
 
 # For those cameras which need it
 if 'startRecMode' in (mode['result'])[0]:
    camera.startRecMode()
+   time.sleep(5)
+
+   # and re-read capabilities
+   mode = camera.getAvailableApiList()
 
 if 'setLiveviewFrameInfo' in (mode['result'])[0]:
    if options.info:

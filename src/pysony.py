@@ -3,6 +3,8 @@ import socket
 import sys
 import xml
 import time
+import re
+import urllib2
 
 SSDP_ADDR = "239.255.255.250"  # The remote host
 SSDP_PORT = 1900    # The same port as used by the server
@@ -11,17 +13,23 @@ SSDP_ST = "urn:schemas-sony-com:service:ScalarWebAPI:1"
 SSDP_TIMEOUT = 10000  #msec
 PACKET_BUFFER_SIZE = 1024
 
-# I don't know how I can use this Upnp (...)
+# Find all available cameras using uPNP
+# Improved with code from 'https://github.com/storborg/sonypy' under MIT license.
+
 class ControlPoint(object):
     def __init__(self):
         self.__bind_sockets()
 
     def __bind_sockets(self):
         self.__udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        self.__udp_socket.settimeout(1)
+        self.__udp_socket.settimeout(0.1)
         return
 
-    def discover(self, duration):
+    def discover(self, duration=None):
+        # Default timeout of 1s
+        if duration==None:
+            duration=1
+
         # Set the socket to broadcast mode.
         self.__udp_socket.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL , 2)
 
@@ -36,20 +44,89 @@ class ControlPoint(object):
 
         # Send the message.
         self.__udp_socket.sendto(msg, (SSDP_ADDR, SSDP_PORT))
+
         # Get the responses.
         packets = self._listen_for_discover(duration)
-        return packets
+        endpoints = []
+        for host,addr,data in packets:
+            resp = self._parse_ssdp_response(data)
+            try:
+                endpoint = self._read_device_definition(resp['location'])
+                endpoints.append(endpoint)
+            except:
+                pass
+        return endpoints
 
     def _listen_for_discover(self, duration):
         start = time.time()
         packets = []
         while (time.time() < (start + duration)):
             try:
-                data, addr = self.__udp_socket.recvfrom(1024)
-                packets.append((data, addr))
+                data, (host, port) = self.__udp_socket.recvfrom(1024)
+
+                # Assemble any packets from multiple cameras
+                found = False
+                for x in xrange(len(packets)):
+                    ohost, oport, odata = packets[x]
+                    if host == ohost and port == oport:
+                        packets.append((host, port, odata+data))
+                        packets.pop(x)
+                        found = True
+
+                if not found:
+                    packets.append((host, port, data))
             except:
                 pass
         return packets
+
+    def _parse_ssdp_response(self, data):
+        lines = data.split('\r\n')
+        assert lines[0] == 'HTTP/1.1 200 OK'
+        headers = {}
+        for line in lines[1:]:
+            if line:
+                try:
+                    key, val = line.split(': ', 1)
+                    headers[key.lower()] = val
+                except:
+                    pass
+        return headers
+
+    def _parse_device_definition(self, doc):
+        """
+        Parse the XML device definition file.
+        """
+        dd_regex = ('<av:X_ScalarWebAPI_Service>'
+            '\s*'
+            '<av:X_ScalarWebAPI_ServiceType>'
+            '(.+?)'
+            '</av:X_ScalarWebAPI_ServiceType>'
+            '\s*'
+            '<av:X_ScalarWebAPI_ActionList_URL>'
+            '(.+?)'
+            '/sony'                               # and also strip '/sony'
+            '</av:X_ScalarWebAPI_ActionList_URL>'
+            '\s*'
+            '<av:X_ScalarWebAPI_AccessType\s*/>'  # Note: QX10 has 'Type />', HX60 has 'Type/>'
+            '\s*'
+            '</av:X_ScalarWebAPI_Service>')
+
+        services = {}
+        for m in re.findall(dd_regex, doc):
+            service_name = m[0]
+            endpoint = m[1]
+            services[service_name] = endpoint
+        return services
+
+    def _read_device_definition(self, url):
+        """
+        Fetch and parse the device definition, and extract the URL endpoint for
+        the camera API service.
+        """
+        r = urllib2.urlopen(url)
+        services = self._parse_device_definition(r.read())
+
+        return services['camera']
 
 import collections
 import urllib2
