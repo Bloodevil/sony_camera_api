@@ -91,8 +91,7 @@ def common_header(bytes):
     time_stemp = int(binascii.hexlify(bytes[4:8]), 16)
     if start_byte != 255: # 0xff fixed
         return '[error] wrong QX livestream start byte'
-    if payload_type != 1: # 0x01 - liveview images
-        return '[error] wrong QX livestream payload type'
+
     common_header = {'start_byte': start_byte,
                     'payload_type': payload_type,
                     'sequence_number': sequence_number,
@@ -100,27 +99,56 @@ def common_header(bytes):
                     }
     return common_header
 
-def payload_header(bytes):
+def payload_header(bytes, payload_type=None):
+    if payload_type==None:
+        payload_type=1	# Assume JPEG
+
     start_code = int(binascii.hexlify(bytes[0:4]), 16)
     jpeg_data_size = int(binascii.hexlify(bytes[4:7]), 16)
     padding_size = int(binascii.hexlify(bytes[7]), 16)
-    reserved_1 = int(binascii.hexlify(bytes[8:12]), 16)
-    flag = int(binascii.hexlify(bytes[12]), 16) # 0x00, fixed
-    reserved_2 = int(binascii.hexlify(bytes[13:]), 16)
-    if flag != 0:
-        return '[error] wrong QX payload header flag'
+
     if start_code != 607479929:
         return '[error] wrong QX payload header start'
 
     payload_header = {'start_code': start_code,
                       'jpeg_data_size': jpeg_data_size,
                       'padding_size': padding_size,
-                      'reserved_1': reserved_1,
+                    }
+
+    if payload_type == 1:
+        payload_header.update(payload_header_jpeg(bytes))
+    elif payload_type == 2:
+        payload_header.update(payload_header_frameinfo(bytes))
+    else:
+        return '[error] unknown payload type'
+
+    return payload_header
+
+def payload_header_jpeg(bytes):
+    reserved_1 = int(binascii.hexlify(bytes[8:12]), 16)
+    flag = int(binascii.hexlify(bytes[12]), 16) # 0x00, fixed
+    reserved_2 = int(binascii.hexlify(bytes[13:]), 16)
+    if flag != 0:
+        return '[error] wrong QX payload header flag'
+
+    payload_header = {'reserved_1': reserved_1,
                       'flag': flag,
-                      'resreved_2':reserved_2,
+                      'reserved_2':reserved_2,
                     }
     return payload_header
 
+def payload_header_frameinfo(bytes):
+    version = int(binascii.hexlify(bytes[8:10]), 16)
+    frame_count = int(binascii.hexlify(bytes[10:12]), 16)
+    frame_size = int(binascii.hexlify(bytes[12:14]), 16)
+    reserved_2 = int(binascii.hexlify(bytes[14:]), 16)
+
+    payload_header = {'version': version,
+                      'frame_count': frame_count,
+                      'frame_size': frame_size,
+                      'reserved_2':reserved_2,
+                    }
+    return payload_header
 
 class SonyAPI():
 
