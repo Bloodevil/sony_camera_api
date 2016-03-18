@@ -11,7 +11,7 @@ try:
 except:
     README = 'https://github.com/Bloodevil/sony_camera_api/blob/master/README.md'
 
-version = '0.1.9'
+version = '0.1.11'
 
 install_requires = [
 ]

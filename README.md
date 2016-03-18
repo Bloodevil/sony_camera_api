@@ -31,7 +31,17 @@ api_list
 examples
 ====
 liveview
-- python 
+- can see the photo via liveview
 
 timer
+- take a picture every n seconds
+
+dump_camera_capabilities
+- show every supported api list
+
+pyLiveView
+- Released under the GPL v2 (or later) by Simon Wood (simon@mungewell.org)
+- Sample application to connect to camera, and start a video recording
+- with or without a GUI LiveView screen
+
 
