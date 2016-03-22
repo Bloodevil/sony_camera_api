@@ -83,15 +83,19 @@ if not found:
    raise Exception('No suitable video driver found!')
 
 infoObject = pygame.display.Info()
-screen = pygame.display.set_mode((infoObject.current_w, infoObject.current_h))
+screen = pygame.display.set_mode((infoObject.current_w, infoObject.current_h), \
+        pygame.HWSURFACE)
+screen.set_alpha(None)
 
-# Loop forever, or until user quits or presses a key
+# Loop forever, or until user quits or presses 'ESC' key
+pygame.event.set_allowed([pygame.QUIT, pygame.KEYDOWN])
 while not done:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             done = True
         elif event.type == pygame.KEYDOWN:
-            done = True
+            if event.key == pygame.K_ESCAPE:
+                done = True
 
     # read next image
     data = incoming.read(8)
@@ -101,7 +105,7 @@ while not done:
     if common['payload_type']==1:
        payload = payload_header(data)
        image_file = io.BytesIO(incoming.read(payload['jpeg_data_size']))
-       incoming_image = pygame.image.load(image_file)
+       incoming_image = pygame.image.load(image_file).convert()
        if options.zoom:
           incoming_image = pygame.transform.scale(incoming_image, \
              (infoObject.current_w, infoObject.current_h))
@@ -115,14 +119,13 @@ while not done:
 
     # copy image to the display
     if incoming_image:
-       screen.fill((0,0,0))
+       (origin_x, origin_y, width, height) = incoming_image.get_rect()
        screen.blit(incoming_image,(0,0))
 
        if frame_info and frame_sequence >= common['sequence_number']-1 \
              and frame_info['jpeg_data_size']:
           for x in range(frame_info['frame_count']):
              x = x * frame_info['frame_size']
-             (left, top, width, height) = incoming_image.get_rect()
 
              (left, top, right, bottom) = struct.unpack(">HHHH", frame_data[x:x+8])
              left = left * width / 10000
@@ -133,4 +136,8 @@ while not done:
              pygame.draw.lines(screen, 0xffffff, True, \
                 [(left, top), (right, top), (right, bottom), (left, bottom)], 2)
 
-       pygame.display.flip()
+       # pygame.display.flip()
+       pygame.display.update((origin_x, origin_y, width, height))
+
+# clean up
+pygame.quit()
