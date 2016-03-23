@@ -120,23 +120,25 @@ while not done:
     # copy image to the display
     if incoming_image:
        (origin_x, origin_y, width, height) = incoming_image.get_rect()
-       screen.blit(incoming_image,(0,0))
 
-       if frame_info and frame_sequence >= common['sequence_number']-1 \
-             and frame_info['jpeg_data_size']:
-          for x in range(frame_info['frame_count']):
-             x = x * frame_info['frame_size']
+       if frame_info:
+          screen.blit(incoming_image,(0,0))
 
-             (left, top, right, bottom) = struct.unpack(">HHHH", frame_data[x:x+8])
-             left = left * width / 10000
-             top = top * height / 10000
-             right = right * width / 10000
-             bottom = bottom * height / 10000
+          if frame_sequence >= common['sequence_number']-1 :
+             for x in range(frame_info['frame_count']):
+                x = x * frame_info['frame_size']
 
-             pygame.draw.lines(screen, 0xffffff, True, \
-                [(left, top), (right, top), (right, bottom), (left, bottom)], 2)
+                (left, top, right, bottom) = struct.unpack(">HHHH", frame_data[x:x+8])
+                left = left * width / 10000
+                top = top * height / 10000
+                right = right * width / 10000
+                bottom = bottom * height / 10000
 
-       # pygame.display.flip()
+                pygame.draw.lines(screen, 0xffffff, True, \
+                   [(left, top), (right, top), (right, bottom), (left, bottom)], 2)
+       else:
+          screen.blit(incoming_image,(0,0))
+
        pygame.display.update((origin_x, origin_y, width, height))
 
 # clean up
