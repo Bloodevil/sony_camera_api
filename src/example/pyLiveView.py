@@ -10,9 +10,10 @@ import threading
 import datetime
 import time
 import argparse
-import Image
+from PIL import Image, ImageDraw
 import io
-from pysony import SonyAPI, payload_header
+from pysony import SonyAPI, ControlPoint, common_header, payload_header
+import struct
 
 # Hack for windows
 import platform
@@ -68,8 +69,18 @@ class liveview_grabber(threading.Thread):
       self.frame_count = 0
       grabber = self
 
-      camera = SonyAPI()
-      #camera = SonyAPI(QX_ADDR='http://192.168.122.1:8080/')
+      # Search for available camera
+      if options.debug:
+         print "searching for camera"
+
+      search = ControlPoint()
+      cameras =  search.discover(1)
+
+      if len(cameras):
+         camera = SonyAPI(QX_ADDR=cameras[0])
+      else:
+         print "No camera found, aborting"
+         return
 
       # Check if we need to do 'startRecMode'
       mode = camera.getAvailableApiList()
@@ -81,13 +92,36 @@ class liveview_grabber(threading.Thread):
          self.event_terminated.set()
          return
 
+      # For those cameras which need it
+      if 'startRecMode' in (mode['result'])[0]:
+         camera.startRecMode()
+         time.sleep(5)
+
+         # and re-read capabilities
+         mode = camera.getAvailableApiList()
+
       if options.debug:
          print "Versions:", camera.getVersions()
          print "API List:", mode
 
-      # For those cameras which need it
-      if 'startRecMode' in (mode['result'])[0]:
-         camera.startRecMode()
+      if 'setLiveviewFrameInfo' in (mode['result'])[0]:
+         if options.info:
+            camera.setLiveviewFrameInfo([{"frameInfo": True}])
+         else:
+            camera.setLiveviewFrameInfo([{"frameInfo": False}])
+
+      if 'getAvailableLiveviewSize' in (mode['result'])[0]:
+         if options.large and len((camera.getAvailableLiveviewSize()['result'])[0]) > 1:
+            incoming = camera.liveview(["L"])
+         else:
+            incoming = camera.liveview()
+      else:
+         incoming = camera.liveview()
+
+      incoming_image = None
+      frame_sequence = None
+      frame_info = None
+      frame_data = None
 
       # Ensure that we're in correct mode (movie by default)
       mode = camera.getAvailableShootMode()
@@ -106,17 +140,9 @@ class liveview_grabber(threading.Thread):
                else:
                   self.photomode = True
 
-      if 'getAvailableLiveviewSize' in (mode['result'])[0]:
-         if options.large and len((camera.getAvailableLiveviewSize()['result'])[0]) > 1:
-            incoming = camera.liveview(["L"])
-         else:
-            incoming = camera.liveview()
-      else:
-         incoming = camera.liveview()
-
       while not self.event_terminate.isSet():
          # Handle events from the camera (record start/stop)
-         if self.frame_count % 10 == 0:
+         if self.frame_count % 50 == 0:
             mode = camera.getEvent(["false"])
          else:
             mode = None
@@ -128,7 +154,7 @@ class liveview_grabber(threading.Thread):
                self.start_time = datetime.datetime.now()
                self.active = True
                if options.debug:
-                  print "started capture"
+                  print "started capture", self.start_time
             elif self.active == True and status['cameraStatus'] == 'IDLE':
                self.active = False
                self.end_time = datetime.datetime.now()
@@ -138,24 +164,33 @@ class liveview_grabber(threading.Thread):
                   print ", delta = ", elapsed.seconds + (float(elapsed.microseconds) / 1000000),
                   print ", fps = ", self.frame_count / (elapsed.seconds + (float(elapsed.microseconds) / 1000000))
 
-         if options.gui == True :
-            # read next image
-            data = incoming.read(8)
-            data = incoming.read(128)
+         # read next image
+         data = incoming.read(8)
+         common = common_header(data)
+         data = incoming.read(128)
+
+         if common['payload_type']==1:
             payload = payload_header(data)
             image_file = io.BytesIO(incoming.read(payload['jpeg_data_size']))
             incoming_image = Image.open(image_file)
             incoming.read(payload['padding_size'])
+         elif common['payload_type']==2:
+            frame_info = payload_header(data, 2)
+            if frame_info['jpeg_data_size']:
+               frame_sequence = common['sequence_number']
+               frame_data =  incoming.read(frame_info['jpeg_data_size'])
+               incoming.read(frame_info['padding_size'])
 
+         if options.gui == True :
             # Correct display size if changed
-            if ((incoming_image.size)[0] != display.width):
+            if incoming_image and ((incoming_image.size)[0] != display.width):
                if options.debug:
                   print "adjusted width from", display.width, "to", (incoming_image.size)[0]
                display.width = (incoming_image.size)[0]
                display.offscreen = gtk.gdk.Pixbuf(gtk.gdk.COLORSPACE_RGB, False, 8,
                   display.width, display.height)
 
-            if ((incoming_image.size)[1] != display.height):
+            if incoming_image and ((incoming_image.size)[1] != display.height):
                if options.debug:
                   print "adjusted height from", display.height, "to", (incoming_image.size)[1]
                display.height = (incoming_image.size)[1]
@@ -163,8 +198,30 @@ class liveview_grabber(threading.Thread):
                   display.width, display.height)
 
             # copy image to the display
-            image_copy = incoming_image.convert("RGB")
-            display.copy_to_offscreen(image_copy)
+            if incoming_image:
+               image_copy = incoming_image.convert("RGB")
+
+               # only recent frame info to image
+               if frame_info and frame_sequence >= common['sequence_number']-1 \
+                     and frame_info['jpeg_data_size']:
+                  for x in range(frame_info['frame_count']):
+                     x = x * frame_info['frame_size']
+                     (left, top, right, bottom) = struct.unpack(">HHHH", frame_data[x:x+8])
+                     left = left * display.width / 10000
+                     top = top * display.height / 10000
+                     right = right * display.width / 10000
+                     bottom = bottom * display.height / 10000
+
+                     dr = ImageDraw.Draw(image_copy)
+                     dr.line((left, top, left, bottom), fill="white", width=3)
+                     dr.line((right, top, right, bottom), fill="white", width=3)
+                     dr.line((left, top, right, top), fill="white", width=3)
+                     dr.line((left, bottom, right, bottom), fill="white", width=3)
+
+               display.copy_to_offscreen(image_copy)
+
+         if options.debug:
+            print "Frame:", common['sequence_number'], common['time_stemp'], datetime.datetime.now()
 
          # count frames
          self.frame_count = self.frame_count + 1
@@ -180,6 +237,9 @@ class liveview_grabber(threading.Thread):
          if self.event_stop_stream.isSet():
             camera.stopMovieRec()
             self.event_stop_stream.clear()
+
+         # give OS a breather
+         #time.sleep(0.01)
 
       # declare that we're done...
       self.event_terminated.set()
@@ -375,6 +435,7 @@ def Run():
    parser.add_argument("-d", "--debug", action="store_true", dest="debug", help="Display additional debug information" )
    parser.add_argument("-l", "--large", action="store_true", dest="large", help="Use HighRes liveview (if available)" )
    parser.add_argument("-s", "--still", action="store_true", dest="still", help="Still photo mode" )
+   parser.add_argument("-i", "--info", action="store_true", dest="info", help="Enable LiveFrameInfo" )
 
    # Gui related
    parser.set_defaults(gui=None, autostart=None)
