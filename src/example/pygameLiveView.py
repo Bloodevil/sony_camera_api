@@ -204,8 +204,44 @@ while not done:
                 right = right * width / 10000
                 bottom = bottom * height / 10000
 
-                pygame.draw.lines(screen, 0xffffff, True, \
-                   [(left, top), (right, top), (right, bottom), (left, bottom)], 2)
+                (category, status, additional) = struct.unpack("BBB", frame_data[x+8:x+11])
+
+                if category == 1: # Constrast AF
+                   # Brackets
+                   pygame.draw.lines(screen, 0x00ff00, False, \
+                      [(left + 10, top), (left, top), (left, bottom), (left + 10, bottom)], 2)
+                   pygame.draw.lines(screen, 0x00ff00, False, \
+                      [(right - 10, top), (right, top), (right, bottom), (right - 10, bottom)], 2)
+                elif category == 4: # face
+                   # Square
+                   if status == 2:
+                      color = 0xffffff
+                   elif status == 3:
+                      color = 0x808080
+                   else:
+                      color = 0x00ff00
+                   pygame.draw.lines(screen, color, True, \
+                      [(left, top), (right, top), (right, bottom), (left, bottom)], 2)
+                elif category == 5: # Tracking
+                   # Triangle Corners
+                   pygame.draw.lines(screen, 0x00ff00, True, \
+                      [(left + 10, top), (left, top), (left, top + 10)], 2)
+                   pygame.draw.lines(screen, 0x00ff00, True, \
+                      [(right - 10, top), (right, top), (right, top + 10)], 2)
+                   pygame.draw.lines(screen, 0x00ff00, True, \
+                      [(left + 10, bottom), (left, bottom), (left, bottom - 10)], 2)
+                   pygame.draw.lines(screen, 0x00ff00, True, \
+                      [(right - 10, bottom), (right, bottom), (right, bottom - 10)], 2)
+                else:
+                   # Corners
+                   pygame.draw.lines(screen, 0x00ff00, False, \
+                      [(left + 10, top), (left, top), (left, top + 10)], 2)
+                   pygame.draw.lines(screen, 0x00ff00, False, \
+                      [(right - 10, top), (right, top), (right, top + 10)], 2)
+                   pygame.draw.lines(screen, 0x00ff00, False, \
+                      [(left + 10, bottom), (left, bottom), (left, bottom - 10)], 2)
+                   pygame.draw.lines(screen, 0x00ff00, False, \
+                      [(right - 10, bottom), (right, bottom), (right, bottom - 10)], 2)
        else:
           screen.blit(incoming_image,(0,0))
 
