@@ -15,6 +15,66 @@ frame_info = None
 frame_data = None
 done = False
 
+# =====================================================================
+import datetime
+
+class rate_eval:
+   def __init__(self, max_depth = None):
+      if max_depth == None:
+         self.max_depth = 10
+      else:
+         self.max_depth = max_depth
+      self.depth = 0
+      self.camera_total = 0
+      self.display_total = 0
+      self.samples = []
+
+   def add(self, camera_timestamp = None, display_timestamp = None):
+      if camera_timestamp == None:
+         return
+      if display_timestamp == None:
+         now = datetime.datetime.now()
+         display_timestamp = (now.second * 1000) + (now.microsecond / 1000)
+
+      # special case for first data point
+      if self.depth == 0:
+         self.last_camera_timestamp = camera_timestamp
+         self.last_display_timestamp = display_timestamp
+
+      camera_delta = camera_timestamp - self.last_camera_timestamp
+      display_delta = display_timestamp - self.last_display_timestamp
+
+      # Rollover
+      if camera_delta < 0:
+         camera_delta += (1 << 32) - 1
+      if display_delta < 0:
+         display_delta += 1000
+
+      self.last_camera_timestamp = camera_timestamp
+      self.last_display_timestamp = display_timestamp
+      self.camera_total += camera_delta
+      self.display_total += display_delta
+
+      # FIFO
+      self.samples.append((camera_delta, display_delta))
+      if self.depth >= self.max_depth:
+         self.camera_total -= self.samples[0][0]
+         self.display_total -= self.samples[0][1]
+         del self.samples[0]
+      else:
+         self.depth += 1
+
+   def too_slow(self, camera_timestamp = None, display_timestamp = None):
+      if camera_timestamp:
+         self.add(camera_timestamp, display_timestamp)
+
+      if self.camera_total < self.display_total:
+         return True
+      else:
+         return False
+
+# =====================================================================
+
 parser = argparse.ArgumentParser(prog="pygameLiveView")
 
 # General Options
@@ -89,6 +149,9 @@ screen.set_alpha(None)
 
 # Loop forever, or until user quits or presses 'ESC' key
 pygame.event.set_allowed([pygame.QUIT, pygame.KEYDOWN])
+
+rate = rate_eval()
+
 while not done:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
@@ -105,6 +168,13 @@ while not done:
     if common['payload_type']==1:
        payload = payload_header(data)
        image_file = io.BytesIO(incoming.read(payload['jpeg_data_size']))
+
+       # Check display rate is better than capture rate
+       # only really needed on slow computers (ie. Raspberry Pi)
+       if rate.too_slow(common['time_stamp']):
+          incoming.read(payload['padding_size'])
+          continue
+
        incoming_image = pygame.image.load(image_file).convert()
        if options.zoom:
           incoming_image = pygame.transform.scale(incoming_image, \

@@ -165,14 +165,14 @@ def common_header(bytes):
     start_byte = int(binascii.hexlify(bytes[0]), 16)
     payload_type = int(binascii.hexlify(bytes[1]), 16)
     sequence_number = int(binascii.hexlify(bytes[2:4]), 16)
-    time_stemp = int(binascii.hexlify(bytes[4:8]), 16)
+    time_stamp = int(binascii.hexlify(bytes[4:8]), 16)
     if start_byte != 255: # 0xff fixed
         return '[error] wrong QX livestream start byte'
 
     common_header = {'start_byte': start_byte,
                     'payload_type': payload_type,
                     'sequence_number': sequence_number,
-                    'time_stemp': time_stemp, #milliseconds
+                    'time_stamp': time_stamp, #milliseconds
                     }
     return common_header
 
