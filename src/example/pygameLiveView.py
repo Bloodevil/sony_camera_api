@@ -15,6 +15,66 @@ frame_info = None
 frame_data = None
 done = False
 
+# =====================================================================
+import datetime
+
+class rate_eval:
+   def __init__(self, max_depth = None):
+      if max_depth == None:
+         self.max_depth = 10
+      else:
+         self.max_depth = max_depth
+      self.depth = 0
+      self.camera_total = 0
+      self.display_total = 0
+      self.samples = []
+
+   def add(self, camera_timestamp = None, display_timestamp = None):
+      if camera_timestamp == None:
+         return
+      if display_timestamp == None:
+         now = datetime.datetime.now()
+         display_timestamp = (now.second * 1000) + (now.microsecond / 1000)
+
+      # special case for first data point
+      if self.depth == 0:
+         self.last_camera_timestamp = camera_timestamp
+         self.last_display_timestamp = display_timestamp
+
+      camera_delta = camera_timestamp - self.last_camera_timestamp
+      display_delta = display_timestamp - self.last_display_timestamp
+
+      # Rollover
+      if camera_delta < 0:
+         camera_delta += (1 << 32) - 1
+      if display_delta < 0:
+         display_delta += 1000
+
+      self.last_camera_timestamp = camera_timestamp
+      self.last_display_timestamp = display_timestamp
+      self.camera_total += camera_delta
+      self.display_total += display_delta
+
+      # FIFO
+      self.samples.append((camera_delta, display_delta))
+      if self.depth >= self.max_depth:
+         self.camera_total -= self.samples[0][0]
+         self.display_total -= self.samples[0][1]
+         del self.samples[0]
+      else:
+         self.depth += 1
+
+   def too_slow(self, camera_timestamp = None, display_timestamp = None):
+      if camera_timestamp:
+         self.add(camera_timestamp, display_timestamp)
+
+      if self.camera_total < self.display_total:
+         return True
+      else:
+         return False
+
+# =====================================================================
+
 parser = argparse.ArgumentParser(prog="pygameLiveView")
 
 # General Options
@@ -89,6 +149,9 @@ screen.set_alpha(None)
 
 # Loop forever, or until user quits or presses 'ESC' key
 pygame.event.set_allowed([pygame.QUIT, pygame.KEYDOWN])
+
+rate = rate_eval()
+
 while not done:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
@@ -105,6 +168,13 @@ while not done:
     if common['payload_type']==1:
        payload = payload_header(data)
        image_file = io.BytesIO(incoming.read(payload['jpeg_data_size']))
+
+       # Check display rate is better than capture rate
+       # only really needed on slow computers (ie. Raspberry Pi)
+       if rate.too_slow(common['time_stamp']):
+          incoming.read(payload['padding_size'])
+          continue
+
        incoming_image = pygame.image.load(image_file).convert()
        if options.zoom:
           incoming_image = pygame.transform.scale(incoming_image, \
@@ -120,23 +190,61 @@ while not done:
     # copy image to the display
     if incoming_image:
        (origin_x, origin_y, width, height) = incoming_image.get_rect()
-       screen.blit(incoming_image,(0,0))
 
-       if frame_info and frame_sequence >= common['sequence_number']-1 \
-             and frame_info['jpeg_data_size']:
-          for x in range(frame_info['frame_count']):
-             x = x * frame_info['frame_size']
+       if frame_info:
+          screen.blit(incoming_image,(0,0))
 
-             (left, top, right, bottom) = struct.unpack(">HHHH", frame_data[x:x+8])
-             left = left * width / 10000
-             top = top * height / 10000
-             right = right * width / 10000
-             bottom = bottom * height / 10000
+          if frame_sequence >= common['sequence_number']-1 :
+             for x in range(frame_info['frame_count']):
+                x = x * frame_info['frame_size']
 
-             pygame.draw.lines(screen, 0xffffff, True, \
-                [(left, top), (right, top), (right, bottom), (left, bottom)], 2)
+                (left, top, right, bottom) = struct.unpack(">HHHH", frame_data[x:x+8])
+                left = left * width / 10000
+                top = top * height / 10000
+                right = right * width / 10000
+                bottom = bottom * height / 10000
 
-       # pygame.display.flip()
+                (category, status, additional) = struct.unpack("BBB", frame_data[x+8:x+11])
+
+                if category == 1: # Constrast AF
+                   # Brackets
+                   pygame.draw.lines(screen, 0x00ff00, False, \
+                      [(left + 10, top), (left, top), (left, bottom), (left + 10, bottom)], 2)
+                   pygame.draw.lines(screen, 0x00ff00, False, \
+                      [(right - 10, top), (right, top), (right, bottom), (right - 10, bottom)], 2)
+                elif category == 4: # face
+                   # Square
+                   if status == 2:
+                      color = 0xffffff
+                   elif status == 3:
+                      color = 0x808080
+                   else:
+                      color = 0x00ff00
+                   pygame.draw.lines(screen, color, True, \
+                      [(left, top), (right, top), (right, bottom), (left, bottom)], 2)
+                elif category == 5: # Tracking
+                   # Triangle Corners
+                   pygame.draw.lines(screen, 0x00ff00, True, \
+                      [(left + 10, top), (left, top), (left, top + 10)], 2)
+                   pygame.draw.lines(screen, 0x00ff00, True, \
+                      [(right - 10, top), (right, top), (right, top + 10)], 2)
+                   pygame.draw.lines(screen, 0x00ff00, True, \
+                      [(left + 10, bottom), (left, bottom), (left, bottom - 10)], 2)
+                   pygame.draw.lines(screen, 0x00ff00, True, \
+                      [(right - 10, bottom), (right, bottom), (right, bottom - 10)], 2)
+                else:
+                   # Corners
+                   pygame.draw.lines(screen, 0x00ff00, False, \
+                      [(left + 10, top), (left, top), (left, top + 10)], 2)
+                   pygame.draw.lines(screen, 0x00ff00, False, \
+                      [(right - 10, top), (right, top), (right, top + 10)], 2)
+                   pygame.draw.lines(screen, 0x00ff00, False, \
+                      [(left + 10, bottom), (left, bottom), (left, bottom - 10)], 2)
+                   pygame.draw.lines(screen, 0x00ff00, False, \
+                      [(right - 10, bottom), (right, bottom), (right, bottom - 10)], 2)
+       else:
+          screen.blit(incoming_image,(0,0))
+
        pygame.display.update((origin_x, origin_y, width, height))
 
 # clean up
