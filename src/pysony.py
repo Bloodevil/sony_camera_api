@@ -4,7 +4,7 @@ import sys
 import xml
 import time
 import re
-import urllib.request, urllib.error, urllib.parse
+import urllib2
 
 SSDP_ADDR = "239.255.255.250"  # The remote host
 SSDP_PORT = 1900    # The same port as used by the server
@@ -66,7 +66,7 @@ class ControlPoint(object):
 
                 # Assemble any packets from multiple cameras
                 found = False
-                for x in range(len(packets)):
+                for x in xrange(len(packets)):
                     ohost, oport, odata = packets[x]
                     if host == ohost and port == oport:
                         packets.append((host, port, odata+data))
@@ -123,13 +123,13 @@ class ControlPoint(object):
         Fetch and parse the device definition, and extract the URL endpoint for
         the camera API service.
         """
-        r = urllib.request.urlopen(url)
+        r = urllib2.urlopen(url)
         services = self._parse_device_definition(r.read())
 
         return services['camera']
 
 import collections
-import urllib.request, urllib.error, urllib.parse
+import urllib2
 import json
 
 # Common Header
@@ -278,9 +278,9 @@ class SonyAPI():
 
         try:
             if target:
-                result = eval(urllib.request.urlopen(self.QX_ADDR + "/sony/" + target, json.dumps(self.params)).read())
+                result = eval(urllib2.urlopen(self.QX_ADDR + "/sony/" + target, json.dumps(self.params)).read())
             else:
-                result = eval(urllib.request.urlopen(self.QX_ADDR + "/sony/camera", json.dumps(self.params)).read())
+                result = eval(urllib2.urlopen(self.QX_ADDR + "/sony/camera", json.dumps(self.params)).read())
         except Exception as e:
             result = "[ERROR] camera doesn't work" + str(e)
         return result
@@ -293,51 +293,51 @@ class SonyAPI():
         if isinstance(liveview, dict):
             try:
                 url = liveview['result'][0].replace('\\','')
-                result = urllib.request.urlopen(url)
+                result = urllib2.urlopen(url)
             except:
                 result = "[ERROR] liveview is dict type but there are no result: " + str(liveview['result'])
         else:
-            print("[WORN] liveview is not a dict type")
+            print "[WORN] liveview is not a dict type"
             result = liveview
         return result
 
     def setShootMode(self, param=None):
         if not param:
-            print("""[ERROR] please enter the param like below
+            print """[ERROR] please enter the param like below
             "still"            Still image shoot mode
             "movie"            Movie shoot mode
             "audio"            Audio shoot mode
             "intervalstill"    Interval still shoot mode
             e.g) In[26]:  camera.setShootMode(param=['still'])
                  Out[26]: {'id': 1, 'result': [0]}
-            """)
+            """
         return self._cmd(method="setShootMode", param=param)
 
 
     def startLiveviewWithSize(self, param=None):
         if not param:
-            print("""[ERROR] please enter the param like below
+            print """[ERROR] please enter the param like below
         "L"     XGA size scale (the size varies depending on the camera models,
                 and some camera models change the liveview quality instead of
                 making the size larger.)
         "M"     VGA size scale (the size varies depending on the camera models)
-        """)
+        """
 
         return self._cmd(method="startLiveviewWithSize", param=param)
 
     def setLiveviewFrameInfo(self, param=None):
         if not param:
-            print("""
+            print """
         "frameInfo"
                 true - Transfer the liveview frame information
                 false - Not transfer
         e.g) SonyAPI.setLiveviewFrameInfo(param=[{"frameInfo": True}])
-        """)
+        """
         return self._cmd(method="setLiveviewFrameInfo", param=param)
 
     def actZoom(self, param=None):
         if not param:
-            print(""" ["direction", "movement"]
+            print """ ["direction", "movement"]
             direction
                 "in"        Zoom-In
                 "out"       Zoom-Out
@@ -346,17 +346,17 @@ class SonyAPI():
                 "stop"      Stop
                 "1shot"     Short push
             e.g) SonyAPI.actZoom(param=["in", "start"])
-            """)
+            """
         return self._cmd(method="actZoom", param=param)
 
     def setZoomSetting(self, param=None):
         if not param:
-            print("""
+            print """
             "zoom"
                 "Optical Zoom Only"                Optical zoom only.
                 "On:Clear Image Zoom"              On:Clear Image Zoom.
             e.g) SonyAPI.setZoomSetting(param=[{"zoom": "Optical Zoom Only"}])
-            """)
+            """
         return self._cmd(method="setZoomSetting", param=param)
 
     def setLiveviewSize(self, param=None):
@@ -364,20 +364,20 @@ class SonyAPI():
 
     def setTouchAFPosition(self, param=None):
         if not param:
-            print(""" [ X-axis position, Y-axis position]
+            print """ [ X-axis position, Y-axis position]
                 X-axis position     Double
                 Y-axis position     Double
             e.g) SonyAPI.setTouchAFPosition(param=[ 23.2, 45.2 ])
-            """)
+            """
         return self._cmd(method="setTouchAFPosition", param=param)
 
     def actTrackingFocus(self, param=None):
         if not param:
-            print("""
+            print """
                 "xPosition"     double                X-axis position
                 "yPosition"     double                Y-axis position
             e.g) SonyAPI.actTrackingFocus(param={"xPosition":23.2, "yPosition": 45.2})
-            """)
+            """
         return self._cmd(method="actTrackingFocus", param=param)
 
     def setTrackingFocus(self, param=None):
