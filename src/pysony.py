@@ -4,7 +4,13 @@ import sys
 import xml
 import time
 import re
-import urllib.request, urllib.error, urllib.parse
+import collections
+import json
+try:
+  import urllib.request, urllib.error, urllib.parse
+except ImportError:
+  import urllib2 as urllib
+
 
 SSDP_ADDR = "239.255.255.250"  # The remote host
 SSDP_PORT = 1900    # The same port as used by the server
@@ -128,9 +134,6 @@ class ControlPoint(object):
 
         return services['camera']
 
-import collections
-import urllib.request, urllib.error, urllib.parse
-import json
 
 # Common Header
 # 0--------1--------2--------+--------4----+----+----+----8
