@@ -37,10 +37,10 @@ class ControlPoint(object):
 
         msg = '\r\n'.join(["M-SEARCH * HTTP/1.1",
                            "HOST: 239.255.255.250:1900",
-                           "MAN: ssdp:discover",
+                           "MAN: \"ssdp:discover\"",
                            "MX: " + str(duration),
                            "ST: " + SSDP_ST,
-                           "USER-AGENT: ",
+                           "USER-AGENT: pysony",
                            "",
                            ""])
 
