@@ -6,11 +6,7 @@ import time
 import re
 import collections
 import json
-try:
-  import urllib.request, urllib.error, urllib.parse
-except ImportError:
-  import urllib2 as urllib
-
+import comp_urllib
 
 SSDP_ADDR = "239.255.255.250"  # The remote host
 SSDP_PORT = 1900    # The same port as used by the server
@@ -49,7 +45,8 @@ class ControlPoint(object):
                            ""])
 
         # Send the message.
-        self.__udp_socket.sendto(msg, (SSDP_ADDR, SSDP_PORT))
+        msg_bytes = bytearray(msg, 'utf8')
+        self.__udp_socket.sendto(msg_bytes, (SSDP_ADDR, SSDP_PORT))
 
         # Get the responses.
         packets = self._listen_for_discover(duration)
@@ -129,7 +126,7 @@ class ControlPoint(object):
         Fetch and parse the device definition, and extract the URL endpoint for
         the camera API service.
         """
-        r = urllib.request.urlopen(url)
+        r = comp_urllib.urlopen(url)
         services = self._parse_device_definition(r.read())
 
         return services['camera']
@@ -281,9 +278,13 @@ class SonyAPI():
 
         try:
             if target:
-                result = eval(urllib.request.urlopen(self.QX_ADDR + "/sony/" + target, json.dumps(self.params)).read())
+                url = self.QX_ADDR + "/sony/" + target
             else:
-                result = eval(urllib.request.urlopen(self.QX_ADDR + "/sony/camera", json.dumps(self.params)).read())
+                url = self.QX_ADDR + "/sony/camera"
+            json_dump = json.dumps(self.params)
+            json_dump_bytes = bytearray(json_dump, 'utf8')
+            read = comp_urllib.urlopen(url, json_dump_bytes).read()
+            result = eval(read)
         except Exception as e:
             result = "[ERROR] camera doesn't work" + str(e)
         return result
@@ -296,7 +297,7 @@ class SonyAPI():
         if isinstance(liveview, dict):
             try:
                 url = liveview['result'][0].replace('\\','')
-                result = urllib.request.urlopen(url)
+                result = comp_urllib.urlopen(url)
             except:
                 result = "[ERROR] liveview is dict type but there are no result: " + str(liveview['result'])
         else:
