@@ -286,7 +286,7 @@ class SonyAPI():
             read = comp_urllib.urlopen(url, json_dump_bytes).read()
             result = eval(read)
         except Exception as e:
-            result = "[ERROR] camera doesn't work" + str(e)
+            result = "[ERROR] camera doesn't work: " + str(e)
         return result
 
     def liveview(self, param=None):
