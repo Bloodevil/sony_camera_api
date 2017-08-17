@@ -6,14 +6,7 @@ except ImportError:
   import urllib2
 
 
-def urlopen(url):
-  global python_version
-  if python_version == 3:
-    return urllib.request.urlopen(url)
-  elif python_version == 2:
-    return urllib2.urlopen(url)
-
-def urlopen(url, data):
+def urlopen(url, data = None):
   global python_version
   if python_version == 3:
     return urllib.request.urlopen(url, data)
