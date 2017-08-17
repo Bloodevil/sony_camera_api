@@ -83,7 +83,8 @@ class ControlPoint(object):
         return packets
 
     def _parse_ssdp_response(self, data):
-        lines = data.split('\r\n')
+        data_str = data.decode('utf8')
+        lines = data_str.split('\r\n')
         assert lines[0] == 'HTTP/1.1 200 OK'
         headers = {}
         for line in lines[1:]:
@@ -114,8 +115,9 @@ class ControlPoint(object):
             '\s*'
             '</av:X_ScalarWebAPI_Service>')
 
+        doc_str = doc.decode('utf8')
         services = {}
-        for m in re.findall(dd_regex, doc):
+        for m in re.findall(dd_regex, doc_str):
             service_name = m[0]
             endpoint = m[1]
             services[service_name] = endpoint
