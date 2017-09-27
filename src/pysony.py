@@ -146,7 +146,8 @@ class ControlPoint(object):
             '</av:X_ScalarWebAPI_Service>')
 
         services = {}
-        for m in re.findall(dd_regex, doc):
+        doc_str = doc.decode('utf8')
+        for m in re.findall(dd_regex, doc_str):
             service_name = m[0]
             endpoint = m[1]
             services[service_name] = endpoint
