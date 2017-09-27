@@ -24,7 +24,7 @@ PACKET_BUFFER_SIZE = 1024
 
 BIND_PORT_NUMBER = 12346  # Seems arbitrary
 # Find all available cameras using uPNP
-
+# Improved with code from 'https://github.com/storborg/sonypy' under MIT license.
 
 class ControlPoint(object):
 
