@@ -3,7 +3,7 @@ import time
 import fnmatch
 import six
 
-print("Searching for camera")
+print("Searching for camera...")
 
 search = pysony.ControlPoint()
 cameras =  search.discover()
@@ -33,8 +33,8 @@ for x in (mode["result"]):
 print("--")
 
 for x in filtered:
-    print(x, ":")
+    print("%s :" % x)
     function=getattr(camera, x)
     params = function()
     print(params)
-    print()
+    print("")
