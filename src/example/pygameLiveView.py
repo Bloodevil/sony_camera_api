@@ -6,6 +6,7 @@ import time
 import io
 import pygame
 import os
+import six
 
 # Global Variables
 options  = None
@@ -92,7 +93,7 @@ cameras =  search.discover()
 if len(cameras):
    camera = SonyAPI(QX_ADDR=cameras[0])
 else:
-   print "No camera found, aborting"
+   print("No camera found, aborting")
    quit()
 
 mode = camera.getAvailableApiList()
@@ -134,7 +135,7 @@ else:
       try:
          pygame.display.init()
       except pygame.error:
-         print 'Driver: {0} failed.'.format(driver)
+         print('Driver: {0} failed.'.format(driver))
          continue
       found = True
       break

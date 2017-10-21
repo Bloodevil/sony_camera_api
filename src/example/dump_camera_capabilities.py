@@ -1,8 +1,9 @@
 import pysony
 import time
 import fnmatch
+import six
 
-print "Searching for camera"
+print("Searching for camera...")
 
 search = pysony.ControlPoint()
 cameras =  search.discover()
@@ -10,7 +11,7 @@ cameras =  search.discover()
 if len(cameras):
     camera = pysony.SonyAPI(QX_ADDR=cameras[0])
 else:
-    print "No camera found, aborting"
+    print("No camera found, aborting")
     quit()
 
 mode = camera.getAvailableApiList()
@@ -23,17 +24,17 @@ if 'startRecMode' in (mode['result'])[0]:
     # and re-read capabilities
     mode = camera.getAvailableApiList()
 
-print "Available calls:"
+print("Available calls:")
 for x in (mode["result"]):
     for y in x:
-        print y
+        print(y)
     filtered = fnmatch.filter(x, "*Supported*")
 
-print "--"
+print("--")
 
 for x in filtered:
-    print x, ":"
+    print("%s :" % x)
     function=getattr(camera, x)
     params = function()
-    print params
-    print
+    print(params)
+    print("")

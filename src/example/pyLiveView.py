@@ -14,6 +14,7 @@ from PIL import Image, ImageDraw
 import io
 from pysony import SonyAPI, ControlPoint, common_header, payload_header
 import struct
+import six
 
 # Hack for windows
 import platform
@@ -46,7 +47,7 @@ class liveview_grabber(threading.Thread):
       global options, grabber, decoder, display, image_copy
 
       if options.debug:
-         print "using LiveView grabber"
+         print("using LiveView grabber")
    
       self.active = False
       self.photomode = False
@@ -71,7 +72,7 @@ class liveview_grabber(threading.Thread):
 
       # Search for available camera
       if options.debug:
-         print "searching for camera"
+         print("searching for camera")
 
       search = ControlPoint()
       cameras =  search.discover(1)
@@ -79,7 +80,7 @@ class liveview_grabber(threading.Thread):
       if len(cameras):
          camera = SonyAPI(QX_ADDR=cameras[0])
       else:
-         print "No camera found, aborting"
+         print("No camera found, aborting")
          return
 
       # Check if we need to do 'startRecMode'
@@ -87,7 +88,7 @@ class liveview_grabber(threading.Thread):
 
       # Need a better method to check for the presence of a camera
       if type(mode) != dict:
-         print "No camera found, aborting"
+         print("No camera found, aborting")
          display.terminate_clicked()
          self.event_terminated.set()
          return
@@ -101,8 +102,8 @@ class liveview_grabber(threading.Thread):
          mode = camera.getAvailableApiList()
 
       if options.debug:
-         print "Versions:", camera.getVersions()
-         print "API List:", mode
+         print("Versions: %s" % camera.getVersions())
+         print("API List: %s" % mode)
 
       if 'setLiveviewFrameInfo' in (mode['result'])[0]:
          if options.info:
@@ -154,15 +155,20 @@ class liveview_grabber(threading.Thread):
                self.start_time = datetime.datetime.now()
                self.active = True
                if options.debug:
-                  print "started capture", self.start_time
+                  print("started capture %s" % self.start_time)
             elif self.active == True and status['cameraStatus'] == 'IDLE':
                self.active = False
                self.end_time = datetime.datetime.now()
                if options.debug:
                   elapsed = self.end_time - self.start_time
-                  print "Stopped capture: frames = ", self.frame_count,
-                  print ", delta = ", elapsed.seconds + (float(elapsed.microseconds) / 1000000),
-                  print ", fps = ", self.frame_count / (elapsed.seconds + (float(elapsed.microseconds) / 1000000))
+                  '''
+                  print("Stopped capture: frames = ", self.frame_count, \
+                     ", delta = ", elapsed.seconds + (float(elapsed.microseconds) / 1000000), \
+                     ", fps = ", self.frame_count / (elapsed.seconds + (float(elapsed.microseconds) / 1000000)))
+                  '''
+                  print("Stopped capture: frames = %d, delta = %d, fps = %d" % \
+                     (self.frame_count, elapsed.seconds + (float(elapsed.microseconds) / 1000000), \
+                     self.frame_count / (elapsed.seconds + (float(elapsed.microseconds) / 1000000))))
 
          # read next image
          data = incoming.read(8)
@@ -185,14 +191,14 @@ class liveview_grabber(threading.Thread):
             # Correct display size if changed
             if incoming_image and ((incoming_image.size)[0] != display.width):
                if options.debug:
-                  print "adjusted width from", display.width, "to", (incoming_image.size)[0]
+                  print("adjusted width from %d to %d" % (display.width, (incoming_image.size)[0]))
                display.width = (incoming_image.size)[0]
                display.offscreen = gtk.gdk.Pixbuf(gtk.gdk.COLORSPACE_RGB, False, 8,
                   display.width, display.height)
 
             if incoming_image and ((incoming_image.size)[1] != display.height):
                if options.debug:
-                  print "adjusted height from", display.height, "to", (incoming_image.size)[1]
+                  print("adjusted height from %d to %d" % (display.height, (incoming_image.size)[1]))
                display.height = (incoming_image.size)[1]
                display.offscreen = gtk.gdk.Pixbuf(gtk.gdk.COLORSPACE_RGB, False, 8,
                   display.width, display.height)
@@ -221,7 +227,7 @@ class liveview_grabber(threading.Thread):
                display.copy_to_offscreen(image_copy)
 
          if options.debug:
-            print "Frame:", common['sequence_number'], common['time_stemp'], datetime.datetime.now()
+            print("Frame: %d, %d, %s" % (common['sequence_number'], common['time_stamp'], datetime.datetime.now()))
 
          # count frames
          self.frame_count = self.frame_count + 1
@@ -263,7 +269,7 @@ class liveview_grabber(threading.Thread):
 
    def terminate(self):
       if options.debug:
-         print "terminating..."
+         print("terminating...")
 
       if options.gui != True:
          self.stop_stream()
@@ -273,7 +279,7 @@ class liveview_grabber(threading.Thread):
          time.sleep(0.1)
  
       if options.debug:
-         print "terminated"
+         print("terminated")
 
 # =====================================================================
 class liveview_display:
