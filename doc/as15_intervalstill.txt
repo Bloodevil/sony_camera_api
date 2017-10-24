@@ -1,0 +1,49 @@
+Searching for camera...
+Found: http://10.0.0.1:10000
+
+Available calls:
+getMethodTypes
+getAvailableApiList
+setShootMode
+getShootMode
+getSupportedShootMode
+getAvailableShootMode
+setSteadyMode
+getSteadyMode
+getSupportedSteadyMode
+getAvailableSteadyMode
+setViewAngle
+getViewAngle
+getSupportedViewAngle
+getAvailableViewAngle
+getSupportedMovieQuality
+startLiveview
+stopLiveview
+startMovieRec
+stopMovieRec
+startIntervalStillRec
+stopIntervalStillRec
+setCameraFunction
+getCameraFunction
+getSupportedCameraFunction
+getAvailableCameraFunction
+getStorageInformation
+getApplicationInfo
+getVersions
+getEvent
+--
+trying 'getAvailableApiList()':
+{'id': 1, 'result': [['getMethodTypes', 'getAvailableApiList', 'setShootMode', 'getShootMode', 'getSupportedShootMode', 'getAvailableShootMode', 'setSteadyMode', 'getSteadyMode', 'getSupportedSteadyMode', 'getAvailableSteadyMode', 'setViewAngle', 'getViewAngle', 'getSupportedViewAngle', 'getAvailableViewAngle', 'getSupportedMovieQuality', 'startLiveview', 'stopLiveview', 'startMovieRec', 'stopMovieRec', 'startIntervalStillRec', 'stopIntervalStillRec', 'setCameraFunction', 'getCameraFunction', 'getSupportedCameraFunction', 'getAvailableCameraFunction', 'getStorageInformation', 'getApplicationInfo', 'getVersions', 'getEvent']]}
+
+trying 'getAvailableShootMode()':
+{'id': 1, 'result': ['intervalstill', ['movie', 'intervalstill']]}
+
+trying 'getAvailableSteadyMode()':
+[ERROR] camera doesn't workHTTP Error 403: Forbidden
+
+trying 'getAvailableViewAngle()':
+[ERROR] camera doesn't workHTTP Error 403: Forbidden
+
+trying 'getAvailableCameraFunction()':
+[ERROR] camera doesn't workHTTP Error 403: Forbidden
+
