@@ -229,7 +229,7 @@ def payload_header_frameinfo(bytes):
 
 class SonyAPI():
 
-    def __init__(self, QX_ADDR=None, params=None):
+    def __init__(self, QX_ADDR=None, params=None, debug=None):
         if not QX_ADDR:
             self.QX_ADDR = 'http://10.0.0.1:10000'
         else:
@@ -242,6 +242,11 @@ class SonyAPI():
             "version": "1.0"}  # move to setting
         else:
             self.params = params
+        if not debug:
+            self.debug = False
+        else:
+            self.debug = debug
+        self.camera_api_list = None
 
     def _truefalse(self, param):
         params = []
@@ -265,9 +270,13 @@ class SonyAPI():
         null = None
 
         if not method in ["getAvailableApiList", "liveview"]:
-            camera_api_list = self.getAvailableApiList()["result"][0]
-            if method not in camera_api_list:
-                return "[ERROR] this api is not support in this camera"
+            if not self.camera_api_list:
+                self.camera_api_list = self.getAvailableApiList()["result"][0]
+            if method not in self.camera_api_list:
+                if self.debug:
+                    print("[WARN] using unsupported camera api: %s" % method)
+                else:
+                    return "[ERROR] this api is not support in this camera"
 
         if method:
             self.params["method"] = method
@@ -283,6 +292,8 @@ class SonyAPI():
                 result = eval(urllib2.urlopen(self.QX_ADDR + "/sony/camera", json.dumps(self.params)).read())
         except Exception as e:
             result = "[ERROR] camera doesn't work" + str(e)
+        if method in ["getAvailableApiList"]:
+            self.camera_api_list = result["result"][0]
         return result
 
     def liveview(self, param=None):
