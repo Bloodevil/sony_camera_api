@@ -9,11 +9,12 @@ import json
 import comp_urllib
 
 SSDP_ADDR = "239.255.255.250"  # The remote host
-SSDP_PORT = 1900    # The same port as used by the server
+SSDP_PORT = 1900  # The same port as used by the server
 SSDP_MX = 1
 SSDP_ST = "urn:schemas-sony-com:service:ScalarWebAPI:1"
-SSDP_TIMEOUT = 10000  #msec
+SSDP_TIMEOUT = 10000  # msec
 PACKET_BUFFER_SIZE = 1024
+
 
 # Find all available cameras using uPNP
 # Improved with code from 'https://github.com/storborg/sonypy' under MIT license.
@@ -29,11 +30,11 @@ class ControlPoint(object):
 
     def discover(self, duration=None):
         # Default timeout of 1s
-        if duration==None:
-            duration=1
+        if duration == None:
+            duration = 1
 
         # Set the socket to broadcast mode.
-        self.__udp_socket.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL , 2)
+        self.__udp_socket.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, 2)
 
         msg = '\r\n'.join(["M-SEARCH * HTTP/1.1",
                            "HOST: 239.255.255.250:1900",
@@ -51,7 +52,7 @@ class ControlPoint(object):
         # Get the responses.
         packets = self._listen_for_discover(duration)
         endpoints = []
-        for host,addr,data in packets:
+        for host, addr, data in packets:
             resp = self._parse_ssdp_response(data)
             try:
                 endpoint = self._read_device_definition(resp['location'])
@@ -72,7 +73,7 @@ class ControlPoint(object):
                 for x in range(len(packets)):
                     ohost, oport, odata = packets[x]
                     if host == ohost and port == oport:
-                        packets.append((host, port, odata+data))
+                        packets.append((host, port, odata + data))
                         packets.pop(x)
                         found = True
 
@@ -101,19 +102,19 @@ class ControlPoint(object):
         Parse the XML device definition file.
         """
         dd_regex = ('<av:X_ScalarWebAPI_Service>'
-            '\s*'
-            '<av:X_ScalarWebAPI_ServiceType>'
-            '(.+?)'
-            '</av:X_ScalarWebAPI_ServiceType>'
-            '\s*'
-            '<av:X_ScalarWebAPI_ActionList_URL>'
-            '(.+?)'
-            '/sony'                               # and also strip '/sony'
-            '</av:X_ScalarWebAPI_ActionList_URL>'
-            '\s*'
-            '<av:X_ScalarWebAPI_AccessType\s*/>'  # Note: QX10 has 'Type />', HX60 has 'Type/>'
-            '\s*'
-            '</av:X_ScalarWebAPI_Service>')
+                    '\s*'
+                    '<av:X_ScalarWebAPI_ServiceType>'
+                    '(.+?)'
+                    '</av:X_ScalarWebAPI_ServiceType>'
+                    '\s*'
+                    '<av:X_ScalarWebAPI_ActionList_URL>'
+                    '(.+?)'
+                    '/sony'  # and also strip '/sony'
+                    '</av:X_ScalarWebAPI_ActionList_URL>'
+                    '\s*'
+                    '<av:X_ScalarWebAPI_AccessType\s*/>'  # Note: QX10 has 'Type />', HX60 has 'Type/>'
+                    '\s*'
+                    '</av:X_ScalarWebAPI_Service>')
 
         doc_str = doc.decode('utf8')
         services = {}
@@ -121,7 +122,13 @@ class ControlPoint(object):
             service_name = m[0]
             endpoint = m[1]
             services[service_name] = endpoint
-        return services
+
+        # identify the camera model
+        model_regex = r'<friendlyName>(.*?)</friendlyName>'
+        r = re.search(model_regex, doc_str)
+        model_info = r.group(1)
+
+        return services, model_info
 
     def _read_device_definition(self, url):
         """
@@ -129,9 +136,10 @@ class ControlPoint(object):
         the camera API service.
         """
         r = comp_urllib.urlopen(url)
-        services = self._parse_device_definition(r.read())
+        print('[w] the doc url is', url)
+        services, model = self._parse_device_definition(r.read())
 
-        return services['camera']
+        return services['camera'], model
 
 
 # Common Header
@@ -163,24 +171,26 @@ class ControlPoint(object):
 
 import binascii
 
+
 def common_header(bytes):
     start_byte = int(binascii.hexlify(bytes[0]), 16)
     payload_type = int(binascii.hexlify(bytes[1]), 16)
     sequence_number = int(binascii.hexlify(bytes[2:4]), 16)
     time_stamp = int(binascii.hexlify(bytes[4:8]), 16)
-    if start_byte != 255: # 0xff fixed
+    if start_byte != 255:  # 0xff fixed
         return '[error] wrong QX livestream start byte'
 
     common_header = {'start_byte': start_byte,
-                    'payload_type': payload_type,
-                    'sequence_number': sequence_number,
-                    'time_stamp': time_stamp, #milliseconds
-                    }
+                     'payload_type': payload_type,
+                     'sequence_number': sequence_number,
+                     'time_stamp': time_stamp,  # milliseconds
+                     }
     return common_header
 
+
 def payload_header(bytes, payload_type=None):
-    if payload_type==None:
-        payload_type=1	# Assume JPEG
+    if payload_type == None:
+        payload_type = 1  # Assume JPEG
 
     start_code = int(binascii.hexlify(bytes[0:4]), 16)
     jpeg_data_size = int(binascii.hexlify(bytes[4:7]), 16)
@@ -192,7 +202,7 @@ def payload_header(bytes, payload_type=None):
     payload_header = {'start_code': start_code,
                       'jpeg_data_size': jpeg_data_size,
                       'padding_size': padding_size,
-                    }
+                      }
 
     if payload_type == 1:
         payload_header.update(payload_header_jpeg(bytes))
@@ -203,18 +213,20 @@ def payload_header(bytes, payload_type=None):
 
     return payload_header
 
+
 def payload_header_jpeg(bytes):
     reserved_1 = int(binascii.hexlify(bytes[8:12]), 16)
-    flag = int(binascii.hexlify(bytes[12]), 16) # 0x00, fixed
+    flag = int(binascii.hexlify(bytes[12]), 16)  # 0x00, fixed
     reserved_2 = int(binascii.hexlify(bytes[13:]), 16)
     if flag != 0:
         return '[error] wrong QX payload header flag'
 
     payload_header = {'reserved_1': reserved_1,
                       'flag': flag,
-                      'reserved_2':reserved_2,
-                    }
+                      'reserved_2': reserved_2,
+                      }
     return payload_header
+
 
 def payload_header_frameinfo(bytes):
     version = int(binascii.hexlify(bytes[8:10]), 16)
@@ -225,25 +237,30 @@ def payload_header_frameinfo(bytes):
     payload_header = {'version': version,
                       'frame_count': frame_count,
                       'frame_size': frame_size,
-                      'reserved_2':reserved_2,
-                    }
+                      'reserved_2': reserved_2,
+                      }
     return payload_header
 
-class SonyAPI():
 
-    def __init__(self, QX_ADDR=None, params=None):
+class SonyAPI():
+    def __init__(self, QX_ADDR=None, params=None, model=None):
         if not QX_ADDR:
             self.QX_ADDR = 'http://10.0.0.1:10000'
         else:
             self.QX_ADDR = QX_ADDR
         if not params:
             self.params = {
-            "method": "",
-            "params": [],
-            "id": 1,  # move to setting
-            "version": "1.0"}  # move to setting
+                "method": "",
+                "params": [],
+                "id": 1,  # move to setting
+                "version": "1.0"}  # move to setting
         else:
             self.params = params
+        self.camera_model = model
+        if self.camera_model is None:
+            self.camera_model = 'dummy'
+        self.available_apis = None
+        self._check_available_apis()
 
     def _truefalse(self, param):
         params = []
@@ -261,15 +278,58 @@ class SonyAPI():
                     params.append(x)
         return params
 
+    def do_actEnableMethods(self):
+        # Get the sg first
+        param_dict = {"developerName": "", "sg": "", "methods": "", "developerID": ""}
+        r = self._cmd(method='actEnableMethods', param=[param_dict], target='accessControl')
+        dg = r['result'][0]["dg"]
+        print("dg ==",dg)
+
+        import hashlib
+        m = hashlib.sha256()
+        k_common = '90adc8515a40558968fe8318b5b023fdd48d3828a2dda8905f3b93a3cd8e58dc'
+        k_dg = dg
+        m.update(k_common.encode())
+        m.update(k_dg.encode())
+        m_sha256 = m.digest()
+        #print(m_sha256)
+
+        import base64
+        m_b64 = base64.b64encode(m_sha256).decode()
+        #print(m_b64)
+        sg = m_b64
+        print('sg ==', sg)
+
+        param_dict = {
+            "developerName": "Sony Corporation",
+            "sg": sg,
+            "developerID": "7DED695E-75AC-4ea9-8A85-E5F8CA0AF2F3",
+            #"methods": ':'.join(['camera/'+i for i in self.available_apis])
+            "methods": "camera/getShootMode"
+        }
+        print("param_dict", param_dict)
+        r = self._cmd(method='actEnableMethods', param=[param_dict], target='accessControl')
+        print(r)
+
+
+    def _check_available_apis(self):
+        if False: #self.camera_model in ['ILCE-7R']:
+            r = self.getSupportedApiInfo()
+            self.available_apis = [ i['name'] for i in r["result"][0][0]['apis'] ]
+        else:
+            self.available_apis = self.getAvailableApiList()["result"][0]
+
     def _cmd(self, method=None, param=[], target=None):
         true = True
         false = False
         null = None
 
-        if not method in ["getAvailableApiList", "liveview"]:
-            camera_api_list = self.getAvailableApiList()["result"][0]
-            if method not in camera_api_list:
-                return "[ERROR] this api is not support in this camera"
+        # if not method in ["getAvailableApiList", "liveview", "getSupportedApiInfo", "actEnableMethods"]:
+        #     if self.available_apis is None:
+        #         self._check_available_apis()
+        #
+        #     if method not in self.available_apis:
+        #         return "[ERROR] this api is not support in this camera"
 
         if method:
             self.params["method"] = method
@@ -298,10 +358,10 @@ class SonyAPI():
             liveview = self._cmd(method="startLiveviewWithSize", param=param)
         if isinstance(liveview, dict):
             try:
-                url = liveview['result'][0].replace('\\','')
+                url = liveview['result'][0].replace('\\', '')
                 result = comp_urllib.urlopen(url)
             except:
-                result = "[ERROR] liveview is dict type but there are no result: " + str(liveview['result'])
+                result = "[ERROR] liveview is dict type but there are no result: " + str(liveview)
         else:
             print("[WORN] liveview is not a dict type")
             result = liveview
@@ -318,7 +378,6 @@ class SonyAPI():
                  Out[26]: {'id': 1, 'result': [0]}
             """)
         return self._cmd(method="setShootMode", param=param)
-
 
     def startLiveviewWithSize(self, param=None):
         if not param:
@@ -542,7 +601,7 @@ class SonyAPI():
     def getEvent(self, param=None):
         return self._cmd(method="getEvent", param=param)
 
-    def getMethodTypes(self, param=None, target=None): # camera, system and avContent
+    def getMethodTypes(self, param=None, target=None):  # camera, system and avContent
         return self._cmd(method="getMethodTypes", param=param, target=None)
 
     def getShootMode(self):
@@ -702,7 +761,7 @@ class SonyAPI():
         return self._cmd(method="getSupportedFNumber")
 
     def getAvailableFNumber(self):
-        return self._cmd(method="getAvailabeFNumber")
+        return self._cmd(method="getAvailableFNumber")
 
     def getShutterSpeed(self):
         return self._cmd(method="getShutterSpeed")
@@ -917,4 +976,5 @@ class SonyAPI():
     def getVersions(self, target=None):
         return self._cmd(method="getVersions", target=target)
 
-
+    def getSupportedApiInfo(self):
+        return self._cmd(method='getSupportedApiInfo', target='guide', param=[{'services': ['camera']}])
