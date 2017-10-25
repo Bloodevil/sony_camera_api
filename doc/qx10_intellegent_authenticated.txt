@@ -1,0 +1,79 @@
+Searching for camera...
+Found: http://10.0.0.1:10000
+
+Available calls:
+getMethodTypes
+getAvailableApiList
+setShootMode
+getShootMode
+getSupportedShootMode
+getAvailableShootMode
+setSelfTimer
+getSelfTimer
+getSupportedSelfTimer
+getAvailableSelfTimer
+setPostviewImageSize
+getPostviewImageSize
+getSupportedPostviewImageSize
+getAvailablePostviewImageSize
+startLiveview
+stopLiveview
+actTakePicture
+startMovieRec
+stopMovieRec
+awaitTakePicture
+actZoom
+setExposureMode
+getExposureMode
+getSupportedExposureMode
+getAvailableExposureMode
+setBeepMode
+getBeepMode
+getSupportedBeepMode
+getAvailableBeepMode
+setCameraFunction
+getCameraFunction
+getSupportedCameraFunction
+getAvailableCameraFunction
+setStillSize
+getStillSize
+getSupportedStillSize
+getAvailableStillSize
+actFormatStorage
+getStorageInformation
+setTouchAFPosition
+cancelTouchAFPosition
+getTouchAFPosition
+getSupportedExposureCompensation
+getSupportedWhiteBalance
+getSupportedIsoSpeedRate
+actHalfPressShutter
+cancelHalfPressShutter
+getApplicationInfo
+getVersions
+getEvent
+--
+trying 'getAvailableApiList()':
+{'id': 1, 'result': [['getMethodTypes', 'getAvailableApiList', 'setShootMode', 'getShootMode', 'getSupportedShootMode', 'getAvailableShootMode', 'setSelfTimer', 'getSelfTimer', 'getSupportedSelfTimer', 'getAvailableSelfTimer', 'setPostviewImageSize', 'getPostviewImageSize', 'getSupportedPostviewImageSize', 'getAvailablePostviewImageSize', 'startLiveview', 'stopLiveview', 'actTakePicture', 'startMovieRec', 'stopMovieRec', 'awaitTakePicture', 'actZoom', 'setExposureMode', 'getExposureMode', 'getSupportedExposureMode', 'getAvailableExposureMode', 'setBeepMode', 'getBeepMode', 'getSupportedBeepMode', 'getAvailableBeepMode', 'setCameraFunction', 'getCameraFunction', 'getSupportedCameraFunction', 'getAvailableCameraFunction', 'setStillSize', 'getStillSize', 'getSupportedStillSize', 'getAvailableStillSize', 'actFormatStorage', 'getStorageInformation', 'setTouchAFPosition', 'cancelTouchAFPosition', 'getTouchAFPosition', 'getSupportedExposureCompensation', 'getSupportedWhiteBalance', 'getSupportedIsoSpeedRate', 'actHalfPressShutter', 'cancelHalfPressShutter', 'getApplicationInfo', 'getVersions', 'getEvent']]}
+
+trying 'getAvailableShootMode()':
+{'id': 1, 'result': ['still', ['still', 'movie']]}
+
+trying 'getAvailableSelfTimer()':
+{'id': 1, 'result': [0, [0, 2, 10]]}
+
+trying 'getAvailablePostviewImageSize()':
+{'id': 1, 'result': ['2M', ['2M', 'Original']]}
+
+trying 'getAvailableExposureMode()':
+{'id': 1, 'result': ['Intelligent Auto', ['Intelligent Auto', 'Superior Auto', 'Program Auto']]}
+
+trying 'getAvailableBeepMode()':
+{'id': 1, 'result': ['On', ['Shutter Only', 'On', 'Off']]}
+
+trying 'getAvailableCameraFunction()':
+{'id': 1, 'result': ['Remote Shooting', ['Remote Shooting', 'Contents Transfer']]}
+
+trying 'getAvailableStillSize()':
+{'id': 1, 'result': [{'aspect': '4:3', 'size': '18M'}, [{'aspect': '4:3', 'size': '18M'}, {'aspect': '4:3', 'size': '5M'}, {'aspect': '16:9', 'size': '13M'}, {'aspect': '16:9', 'size': '2M'}]]}
+
