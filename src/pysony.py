@@ -264,6 +264,30 @@ class SonyAPI():
                     params.append(x)
         return params
 
+    def _access(self, method=None, param=[]):
+        true = True
+        false = False
+        null = None
+
+        if method:
+            self.params["method"] = method
+        if param:
+            self.params["params"] = param
+        else:
+            self.params["params"] = []
+
+        try:
+            result = eval(urllib2.urlopen(self.QX_ADDR + "/sony/accessControl", json.dumps(self.params)).read())
+        except Exception as e:
+            result = "[ERROR] camera doesn't work" + str(e)
+        return result
+
+    def actEnableMethods(self, param=None):
+        if not param:
+            print """[ERROR] please enter the param like below
+            """
+        return self._access(method="actEnableMethods", param=param)
+
     def _cmd(self, method=None, param=[], target=None):
         true = True
         false = False
