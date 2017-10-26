@@ -1,21 +1,17 @@
 # Echo client program
-import io
-import queue
+import six
+if six.PY3:
+    from queue import LifoQueue
+else:
+    from Queue import LifoQueue
 import socket
-import sys
 import threading
-import xml
 import time
 import re
-import collections
 import json
 from struct import unpack, unpack_from
-from urllib.parse import urlparse
-
-import requests
 
 import comp_urllib
-from LiveviewHelper3 import LiveviewProcessorThread
 
 SSDP_ADDR = "239.255.255.250"  # The remote host
 SSDP_PORT = 1900    # The same port as used by the server
@@ -170,7 +166,6 @@ class ControlPoint(object):
 # | Padding data size ...                                 |
 # ------------------------------JPEG data size + Padding data size
 
-import binascii
 
 def common_header(data):
     start_byte,payload_type,sequence_number,time_stamp = unpack('!BBHI', data)
@@ -292,6 +287,39 @@ class SonyAPI():
             result = "[ERROR] camera doesn't work: " + str(e)
         return result
 
+    # Reading from the streaming data is a part of sony apis
+    class LiveviewStreamThread(threading.Thread):
+        def __init__(self, url):
+            # Direct class call `threading.Thread` instead of `super()` for python2 capability
+            threading.Thread.__init__(self)
+            self.lv_url = url
+            self._lilo_jpeg_pool = LifoQueue()
+
+        def run(self):
+            sess = comp_urllib.urlopen(self.lv_url)
+
+            while True:
+                try:
+                    data = sess.read(8)
+                    ch = common_header(data)
+                    # print(ch)
+
+                    data = sess.read(128)
+                    payload = payload_header(data, payload_type=ch['payload_type'])
+                    # print(payload)
+
+                    data_img = sess.read(payload['jpeg_data_size'])
+                    assert len(data_img) == payload['jpeg_data_size']
+                    # print('[i] one image ready')
+                    self._lilo_jpeg_pool.put(data_img)
+
+                    sess.read(payload['padding_size'])
+                except Exception as e:
+                    print("[ERROR]" + str(e))
+
+        def get_latest_view(self):
+            return self._lilo_jpeg_pool.get()
+
     def liveview(self, param=None):
         if not param:
             liveview = self._cmd(method="startLiveview")
@@ -301,11 +329,8 @@ class SonyAPI():
             # print('[w] liveview return', liveview)
             try:
                 url = liveview['result'][0].replace('\\', '')
-                print('[i] streaming from url', url)
-                # result = comp_urllib.urlopen(url)
-                th = LiveviewProcessorThread(url)
-                th.start()
-                result = th
+                print('[i] Liveview streaming url is', url)
+                result = url
             except:
                 # Sometimes `liveview` just return json without `result` field (maybe an `error` field instead)
                 result = "[ERROR] liveview is dict type but there are no result: " + str(liveview)
@@ -325,7 +350,6 @@ class SonyAPI():
                  Out[26]: {'id': 1, 'result': [0]}
             """)
         return self._cmd(method="setShootMode", param=param)
-
 
     def startLiveviewWithSize(self, param=None):
         if not param:

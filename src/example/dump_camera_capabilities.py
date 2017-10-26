@@ -7,6 +7,7 @@ print("Searching for camera...")
 
 search = pysony.ControlPoint()
 cameras =  search.discover()
+# cameras = ['http://192.168.122.1:8080']
 
 if len(cameras):
     camera = pysony.SonyAPI(QX_ADDR=cameras[0])
