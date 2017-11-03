@@ -225,6 +225,19 @@ def payload_header_frameinfo(data):
                     }
     return payload_header
 
+def payload_frameinfo(data):
+    left, top, right, bottom = unpack_from(">HHHH", data)
+    category, status, additional = unpack_from("BBB", data, offset=8)
+    payload_frameinfo = {'left': left,
+                      'top': top,
+                      'right': right,
+                      'bottom': bottom,
+                      'category': category,
+                      'status': status,
+                      'additional': additional
+                    }
+    return payload_frameinfo
+
 class SonyAPI():
 
     def __init__(self, QX_ADDR=None, params=None):
@@ -293,32 +306,63 @@ class SonyAPI():
             # Direct class call `threading.Thread` instead of `super()` for python2 capability
             threading.Thread.__init__(self)
             self.lv_url = url
+            self._lilo_head_pool = LifoQueue()
             self._lilo_jpeg_pool = LifoQueue()
+
+            self.header = None
+            self.frameinfo = []
 
         def run(self):
             sess = urlopen(self.lv_url)
 
             while True:
                 try:
-                    data = sess.read(8)
-                    ch = common_header(data)
-                    # print(ch)
+                    header = sess.read(8)
+                    ch = common_header(header)
 
                     data = sess.read(128)
                     payload = payload_header(data, payload_type=ch['payload_type'])
-                    # print(payload)
 
-                    data_img = sess.read(payload['jpeg_data_size'])
-                    assert len(data_img) == payload['jpeg_data_size']
-                    # print('[i] one image ready')
-                    self._lilo_jpeg_pool.put(data_img)
+                    if ch['payload_type'] == 1:
+                        data_img = sess.read(payload['jpeg_data_size'])
+                        assert len(data_img) == payload['jpeg_data_size']
+
+                        self._lilo_head_pool.put(header)
+                        self._lilo_jpeg_pool.put(data_img)
+
+                    elif ch['payload_type'] == 2:
+                        self.frameinfo = []
+
+                        for x in range(payload['frame_count']):
+                            data_img = sess.read(payload['frame_size'])
+                            self.frameinfo.append(payload_frameinfo(data_img))
 
                     sess.read(payload['padding_size'])
                 except Exception as e:
                     print("[ERROR]" + str(e))
 
+        def get_header(self):
+            if not self.header:
+                try:
+                    self.header = self._lilo_head_pool.get_nowait()
+                except Exception as e:
+                    self.header = None
+            return self.header
+
         def get_latest_view(self):
-            return self._lilo_jpeg_pool.get()
+            # note this is a blocking call
+            data_img = self._lilo_jpeg_pool.get()
+
+            # retrive next header
+            try:
+                self.header = self._lilo_head_pool.get_nowait()
+            except Exception as e:
+                self.header = None
+
+            return data_img
+
+        def get_frameinfo(self):
+            return self.frameinfo
 
     def liveview(self, param=None):
         if not param:
@@ -326,10 +370,8 @@ class SonyAPI():
         else:
             liveview = self._cmd(method="startLiveviewWithSize", param=param)
         if isinstance(liveview, dict):
-            # print('[w] liveview return', liveview)
             try:
                 url = liveview['result'][0].replace('\\', '')
-                print('[i] Liveview streaming url is', url)
                 result = url
             except:
                 # Sometimes `liveview` just return json without `result` field (maybe an `error` field instead)
