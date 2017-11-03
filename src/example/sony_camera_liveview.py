@@ -1,4 +1,4 @@
-from pysony import SonyAPI
+from pysony import SonyAPI, ControlPoint
 
 import time
 
@@ -42,13 +42,23 @@ if flask_app:
 
 
 def liveview():
-    camera = SonyAPI(QX_ADDR='http://192.168.122.1:8080')
+    # Connect and set-up camera
+    search = ControlPoint()
+    cameras =  search.discover(5)
 
-    # a7r need `startRecMode` before we can use liveview
+    if len(cameras):
+        camera = SonyAPI(QX_ADDR=cameras[0])
+    else:
+        print("No camera found, aborting")
+        quit()
+
+    mode = camera.getAvailableApiList()
+
+    # some cameras need `startRecMode` before we can use liveview
     #   For those camera which doesn't require this, just comment out the following 2 lines
-    camera.startRecMode()
-    # Wait for the camera waking up
-    time.sleep(2)
+    if 'startRecMode' in (mode['result'])[0]:
+        camera.startRecMode()
+        time.sleep(2)
 
     sizes = camera.getLiveviewSize()
     print('Supported liveview size:', sizes)
