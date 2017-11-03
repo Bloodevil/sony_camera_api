@@ -1,0 +1,116 @@
+Available calls:
+getVersions
+getMethodTypes
+getApplicationInfo
+getAvailableApiList
+getEvent
+actTakePicture
+stopRecMode
+startLiveview
+stopLiveview
+startLiveviewWithSize
+actHalfPressShutter
+cancelHalfPressShutter
+setSelfTimer
+getSelfTimer
+getAvailableSelfTimer
+getSupportedSelfTimer
+getSupportedContShootingMode
+getSupportedContShootingSpeed
+getExposureMode
+getSupportedExposureMode
+setExposureCompensation
+getExposureCompensation
+getAvailableExposureCompensation
+getSupportedExposureCompensation
+setFNumber
+getFNumber
+getAvailableFNumber
+getSupportedFNumber
+setIsoSpeedRate
+getIsoSpeedRate
+getAvailableIsoSpeedRate
+getSupportedIsoSpeedRate
+getLiveviewSize
+getAvailableLiveviewSize
+getSupportedLiveviewSize
+setPostviewImageSize
+getPostviewImageSize
+getAvailablePostviewImageSize
+getSupportedPostviewImageSize
+getSupportedProgramShift
+setShootMode
+getShootMode
+getAvailableShootMode
+getSupportedShootMode
+getShutterSpeed
+getAvailableShutterSpeed
+getSupportedShutterSpeed
+setTouchAFPosition
+getTouchAFPosition
+setWhiteBalance
+getWhiteBalance
+getSupportedWhiteBalance
+getAvailableWhiteBalance
+getSupportedFlashMode
+setFocusMode
+getFocusMode
+getAvailableFocusMode
+getSupportedFocusMode
+setZoomSetting
+getAvailableZoomSetting
+getZoomSetting
+getSupportedZoomSetting
+getStorageInformation
+setLiveviewFrameInfo
+getLiveviewFrameInfo
+--
+getSupportedSelfTimer :
+{'id': 1, 'result': [[0, 2, 10]]}
+
+getSupportedContShootingMode :
+{'id': 1, 'result': [{'candidate': ['Single']}]}
+
+getSupportedContShootingSpeed :
+{'id': 1, 'result': [{'candidate': []}]}
+
+getSupportedExposureMode :
+{'id': 1, 'result': [['Program Auto', 'Aperture', 'Shutter', 'Manual', 'Intelligent Auto']]}
+
+getSupportedExposureCompensation :
+{'id': 1, 'result': [[15], [-15], [1]]}
+
+getSupportedFNumber :
+{'id': 1, 'result': [['1.8', '2.0', '2.2', '2.5', '2.8', '3.2', '3.5', '4.0', '4.5', '5.0', '5.6', '6.3', '7.1', '8.0', '9.0', '10', '11', '13', '14', '16', '18', '20', '22']]}
+
+getSupportedIsoSpeedRate :
+{'id': 1, 'result': [['AUTO', '50', '64', '80', '100', '125', '160', '200', '250', '320', '400', '500', '640', '800', '1000', '1250', '1600', '2000', '2500', '3200', '4000', '5000', '6400', '8000', '10000', '12800', '16000', '20000', '25600']]}
+
+getSupportedLiveviewSize :
+{'id': 1, 'result': [['L', 'M']]}
+
+getSupportedPostviewImageSize :
+{'id': 1, 'result': [['Original', '2M']]}
+
+getSupportedProgramShift :
+{'id': 1, 'result': [[]]}
+
+getSupportedShootMode :
+{'id': 1, 'result': [['still']]}
+
+getSupportedShutterSpeed :
+{'id': 1, 'result': [[]]}
+
+getSupportedWhiteBalance :
+{'id': 1, 'result': [[{'whiteBalanceMode': 'Auto WB', 'colorTemperatureRange': []}, {'whiteBalanceMode': 'Daylight', 'colorTemperatureRange': []}, {'whiteBalanceMode': 'Shade', 'colorTemperatureRange': []}, {'whiteBalanceMode': 'Cloudy', 'colorTemperatureRange': []}, {'whiteBalanceMode': 'Incandescent', 'colorTemperatureRange': []}, {'whiteBalanceMode': 'Fluorescent: Warm White (-1)', 'colorTemperatureRange': []}, {'whiteBalanceMode': 'Fluorescent: Cool White (0)', 'colorTemperatureRange': []}, {'whiteBalanceMode': 'Fluorescent: Day White (+1)', 'colorTemperatureRange': []}, {'whiteBalanceMode': 'Fluorescent: Daylight (+2)', 'colorTemperatureRange': []}, {'whiteBalanceMode': 'Flash', 'colorTemperatureRange': []}, {'whiteBalanceMode': 'Color Temperature', 'colorTemperatureRange': [9900, 2500, 100]}, {'whiteBalanceMode': 'Custom 1', 'colorTemperatureRange': []}, {'whiteBalanceMode': 'Custom 2', 'colorTemperatureRange': []}, {'whiteBalanceMode': 'Custom 3', 'colorTemperatureRange': []}]]}
+
+getSupportedFlashMode :
+{'id': 1, 'result': [['off', 'auto', 'on', 'slowSync', 'rearSync', 'wireless']]}
+
+getSupportedFocusMode :
+{'id': 1, 'result': [['AF-S', 'AF-C', 'DMF', 'MF']]}
+
+getSupportedZoomSetting :
+{'id': 1, 'result': [{'candidate': ['Optical Zoom Only', 'On:Clear Image Zoom', 'On:Digital Zoom']}]}
+
+

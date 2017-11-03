@@ -1,65 +1,68 @@
-from pysony import SonyAPI, payload_header
+from pysony import SonyAPI
 
-import urllib2
-import thread
 import time
-import os
 
+flask_app = None
 try:
-    from flask import Flask, url_for
-    app = Flask(__name__)
+    import flask
+    from flask import Flask
+    flask_app = Flask(__name__)
+except ImportError:
+    print("Cannot import `flask`, liveview on web is not available")
 
-    #if you want to see the payload, set Debug = True.
-    app.config['DEBUG'] = False
-    @app.route("/")
-    def view():
-        return """<html>
-                <head>
-                    <meta http-equiv="refresh" content="1">
-                </head>
-                <img src="http://127.0.0.1:5000%s">
-                </html>""" % url_for('static', filename='test.jpg')
-except Exception as e:
-    print(e)
-    app = None
+if flask_app:
+    flask_app.get_frame_handle = None
+
+    flask_app.config['DEBUG'] = False
+
+    @flask_app.route("/")
+    def index():
+        return flask.render_template_string("""
+            <html>
+              <head>
+                <title>SONY Camera LiveView Streaming</title>
+              </head>
+              <body>
+                <h1>SONY LiveView Streaming</h1>
+                <img src="{{ url_for('video_feed') }}">
+              </body>
+            </html>
+                    """)
+
+    def gen():
+        while True:
+            if flask_app.get_frame_handle is not None:
+                frame = flask_app.get_frame_handle()
+                yield (b'--frame\r\n'
+                       b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
+
+    @flask_app.route('/video_feed')
+    def video_feed():
+        return flask.Response(gen(), mimetype='multipart/x-mixed-replace; boundary=frame')
+
 
 def liveview():
-    camera = SonyAPI()
+    camera = SonyAPI(QX_ADDR='http://192.168.122.1:8080')
 
-    # [TODO]
-    # replace liveview function to camera.liveview function.
-    # liveview function will do everything in this liveview function not just a file.
-    f = camera.liveview()
-    #st = os.stat(f.name())
+    # a7r need `startRecMode` before we can use liveview
+    #   For those camera which doesn't require this, just comment out the following 2 lines
+    camera.startRecMode()
+    # Wait for the camera waking up
+    time.sleep(2)
 
-    if not os.path.exists("./static"):
-        os.makedirs("./static")
+    sizes = camera.getLiveviewSize()
+    print('Supported liveview size:', sizes)
+    # url = camera.liveview("M")
+    url = camera.liveview()
 
-    pos = 0
-    while True:
-        # read f size and control.
-        #if st.st_size - pos < 136:
-        #    continue
-        #else:
-        #    pos += 136
-        data = f.read(8)
-        data = f.read(128)
-        payload = payload_header(data)
-        # [TODO] when debug mode, print payload for debug
-        if False: #app.config('DEBUG'):
-            print(payload)
-        try:
-            data_size = f.read(payload['jpeg_data_size'])
-            test = open('./static/test.jpg', 'wb')
-            # wait until get pyload jpeg data size.
-            test.write(data_size)
-            test.close()
-            f.read(payload['padding_size'])
-        except Exception as e:
-            print("[ERROR]" + str(e))
+    lst = SonyAPI.LiveviewStreamThread(url)
+    lst.start()
+    print('[i] LiveviewStreamThread started.')
+    return lst.get_latest_view
+
 
 if __name__ == "__main__":
-    thread.start_new_thread(liveview, ())
-    if app:
-        app.run()
-
+    handler = liveview()
+    if flask_app:
+        flask_app.get_frame_handle = handler
+        flask_app.run()

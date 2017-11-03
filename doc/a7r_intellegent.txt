@@ -1,0 +1,110 @@
+Available calls:
+getVersions
+getMethodTypes
+getApplicationInfo
+getAvailableApiList
+getEvent
+actTakePicture
+stopRecMode
+startLiveview
+stopLiveview
+startLiveviewWithSize
+actHalfPressShutter
+cancelHalfPressShutter
+setSelfTimer
+getSelfTimer
+getAvailableSelfTimer
+getSupportedSelfTimer
+getSupportedContShootingMode
+getSupportedContShootingSpeed
+getExposureMode
+getSupportedExposureMode
+getExposureCompensation
+getAvailableExposureCompensation
+getSupportedExposureCompensation
+getFNumber
+getAvailableFNumber
+getSupportedFNumber
+getIsoSpeedRate
+getAvailableIsoSpeedRate
+getSupportedIsoSpeedRate
+getLiveviewSize
+getAvailableLiveviewSize
+getSupportedLiveviewSize
+setPostviewImageSize
+getPostviewImageSize
+getAvailablePostviewImageSize
+getSupportedPostviewImageSize
+getSupportedProgramShift
+setShootMode
+getShootMode
+getAvailableShootMode
+getSupportedShootMode
+getShutterSpeed
+getAvailableShutterSpeed
+getSupportedShutterSpeed
+setTouchAFPosition
+getTouchAFPosition
+getWhiteBalance
+getSupportedWhiteBalance
+getAvailableWhiteBalance
+getSupportedFlashMode
+setFocusMode
+getFocusMode
+getAvailableFocusMode
+getSupportedFocusMode
+setZoomSetting
+getAvailableZoomSetting
+getZoomSetting
+getSupportedZoomSetting
+getStorageInformation
+setLiveviewFrameInfo
+getLiveviewFrameInfo
+--
+getSupportedSelfTimer :
+{'id': 1, 'result': [[0, 2, 10]]}
+
+getSupportedContShootingMode :
+{'id': 1, 'result': [{'candidate': ['Single']}]}
+
+getSupportedContShootingSpeed :
+{'id': 1, 'result': [{'candidate': []}]}
+
+getSupportedExposureMode :
+{'id': 1, 'result': [['Program Auto', 'Aperture', 'Shutter', 'Manual', 'Intelligent Auto']]}
+
+getSupportedExposureCompensation :
+{'id': 1, 'result': [[0], [0], [0]]}
+
+getSupportedFNumber :
+{'id': 1, 'result': [[]]}
+
+getSupportedIsoSpeedRate :
+{'id': 1, 'result': [[]]}
+
+getSupportedLiveviewSize :
+{'id': 1, 'result': [['L', 'M']]}
+
+getSupportedPostviewImageSize :
+{'id': 1, 'result': [['Original', '2M']]}
+
+getSupportedProgramShift :
+{'id': 1, 'result': [[]]}
+
+getSupportedShootMode :
+{'id': 1, 'result': [['still']]}
+
+getSupportedShutterSpeed :
+{'id': 1, 'result': [[]]}
+
+getSupportedWhiteBalance :
+{'id': 1, 'result': [[]]}
+
+getSupportedFlashMode :
+{'id': 1, 'result': [['off', 'auto', 'on', 'slowSync', 'rearSync', 'wireless']]}
+
+getSupportedFocusMode :
+{'id': 1, 'result': [['AF-S', 'AF-C', 'DMF', 'MF']]}
+
+getSupportedZoomSetting :
+{'id': 1, 'result': [{'candidate': ['Optical Zoom Only', 'On:Clear Image Zoom', 'On:Digital Zoom']}]}

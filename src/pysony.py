@@ -1,11 +1,16 @@
 # Echo client program
+import six
+if six.PY3:
+    from queue import LifoQueue
+else:
+    from Queue import LifoQueue
 import socket
-import sys
-import xml
+import threading
 import time
 import re
-import collections
 import json
+from struct import unpack, unpack_from
+
 import comp_urllib
 
 SSDP_ADDR = "239.255.255.250"  # The remote host
@@ -161,15 +166,11 @@ class ControlPoint(object):
 # | Padding data size ...                                 |
 # ------------------------------JPEG data size + Padding data size
 
-import binascii
 
-def common_header(bytes):
-    start_byte = int(binascii.hexlify(bytes[0]), 16)
-    payload_type = int(binascii.hexlify(bytes[1]), 16)
-    sequence_number = int(binascii.hexlify(bytes[2:4]), 16)
-    time_stamp = int(binascii.hexlify(bytes[4:8]), 16)
+def common_header(data):
+    start_byte,payload_type,sequence_number,time_stamp = unpack('!BBHI', data)
     if start_byte != 255: # 0xff fixed
-        return '[error] wrong QX livestream start byte'
+        raise RuntimeError('[error] wrong QX livestream start byte')
 
     common_header = {'start_byte': start_byte,
                     'payload_type': payload_type,
@@ -178,16 +179,19 @@ def common_header(bytes):
                     }
     return common_header
 
-def payload_header(bytes, payload_type=None):
+def payload_header(data, payload_type=None):
     if payload_type==None:
         payload_type=1	# Assume JPEG
 
-    start_code = int(binascii.hexlify(bytes[0:4]), 16)
-    jpeg_data_size = int(binascii.hexlify(bytes[4:7]), 16)
-    padding_size = int(binascii.hexlify(bytes[7]), 16)
-
+    start_code,jpeg_data_size_2,jpeg_data_size_1,jpeg_data_size_0,padding_size = unpack_from('!IBBBB',data)
     if start_code != 607479929:
-        return '[error] wrong QX payload header start'
+        raise RuntimeError('[error] wrong QX payload header start')
+
+    # This seems silly, but it's a 3-byte-integer !
+    jpeg_data_size = jpeg_data_size_0 * 2**0 + jpeg_data_size_1 * 2**8 + jpeg_data_size_2 * 2**16
+
+    if jpeg_data_size > 100000:
+        print("[D] possibly wrong image size?")
 
     payload_header = {'start_code': start_code,
                       'jpeg_data_size': jpeg_data_size,
@@ -195,37 +199,29 @@ def payload_header(bytes, payload_type=None):
                     }
 
     if payload_type == 1:
-        payload_header.update(payload_header_jpeg(bytes))
+        payload_header.update(payload_header_jpeg(data))
     elif payload_type == 2:
-        payload_header.update(payload_header_frameinfo(bytes))
+        payload_header.update(payload_header_frameinfo(data))
     else:
-        return '[error] unknown payload type'
+        raise RuntimeError('[error] unknown payload type')
 
     return payload_header
 
-def payload_header_jpeg(bytes):
-    reserved_1 = int(binascii.hexlify(bytes[8:12]), 16)
-    flag = int(binascii.hexlify(bytes[12]), 16) # 0x00, fixed
-    reserved_2 = int(binascii.hexlify(bytes[13:]), 16)
+def payload_header_jpeg(data):
+    reserved_1, flag = unpack_from('!IB',data, offset=8)
     if flag != 0:
         return '[error] wrong QX payload header flag'
 
     payload_header = {'reserved_1': reserved_1,
-                      'flag': flag,
-                      'reserved_2':reserved_2,
+                      'flag': flag
                     }
     return payload_header
 
-def payload_header_frameinfo(bytes):
-    version = int(binascii.hexlify(bytes[8:10]), 16)
-    frame_count = int(binascii.hexlify(bytes[10:12]), 16)
-    frame_size = int(binascii.hexlify(bytes[12:14]), 16)
-    reserved_2 = int(binascii.hexlify(bytes[14:]), 16)
-
+def payload_header_frameinfo(data):
+    version, frame_count, frame_size = unpack_from('!HHH', data, offset=8)
     payload_header = {'version': version,
                       'frame_count': frame_count,
-                      'frame_size': frame_size,
-                      'reserved_2':reserved_2,
+                      'frame_size': frame_size
                     }
     return payload_header
 
@@ -291,17 +287,53 @@ class SonyAPI():
             result = "[ERROR] camera doesn't work: " + str(e)
         return result
 
+    # Reading from the streaming data is a part of sony apis
+    class LiveviewStreamThread(threading.Thread):
+        def __init__(self, url):
+            # Direct class call `threading.Thread` instead of `super()` for python2 capability
+            threading.Thread.__init__(self)
+            self.lv_url = url
+            self._lilo_jpeg_pool = LifoQueue()
+
+        def run(self):
+            sess = comp_urllib.urlopen(self.lv_url)
+
+            while True:
+                try:
+                    data = sess.read(8)
+                    ch = common_header(data)
+                    # print(ch)
+
+                    data = sess.read(128)
+                    payload = payload_header(data, payload_type=ch['payload_type'])
+                    # print(payload)
+
+                    data_img = sess.read(payload['jpeg_data_size'])
+                    assert len(data_img) == payload['jpeg_data_size']
+                    # print('[i] one image ready')
+                    self._lilo_jpeg_pool.put(data_img)
+
+                    sess.read(payload['padding_size'])
+                except Exception as e:
+                    print("[ERROR]" + str(e))
+
+        def get_latest_view(self):
+            return self._lilo_jpeg_pool.get()
+
     def liveview(self, param=None):
         if not param:
             liveview = self._cmd(method="startLiveview")
         else:
             liveview = self._cmd(method="startLiveviewWithSize", param=param)
         if isinstance(liveview, dict):
+            # print('[w] liveview return', liveview)
             try:
-                url = liveview['result'][0].replace('\\','')
-                result = comp_urllib.urlopen(url)
+                url = liveview['result'][0].replace('\\', '')
+                print('[i] Liveview streaming url is', url)
+                result = url
             except:
-                result = "[ERROR] liveview is dict type but there are no result: " + str(liveview['result'])
+                # Sometimes `liveview` just return json without `result` field (maybe an `error` field instead)
+                result = "[ERROR] liveview is dict type but there are no result: " + str(liveview)
         else:
             print("[WORN] liveview is not a dict type")
             result = liveview
@@ -318,7 +350,6 @@ class SonyAPI():
                  Out[26]: {'id': 1, 'result': [0]}
             """)
         return self._cmd(method="setShootMode", param=param)
-
 
     def startLiveviewWithSize(self, param=None):
         if not param:
@@ -702,7 +733,7 @@ class SonyAPI():
         return self._cmd(method="getSupportedFNumber")
 
     def getAvailableFNumber(self):
-        return self._cmd(method="getAvailabeFNumber")
+        return self._cmd(method="getAvailableFNumber")
 
     def getShutterSpeed(self):
         return self._cmd(method="getShutterSpeed")
