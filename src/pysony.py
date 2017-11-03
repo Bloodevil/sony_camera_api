@@ -2,16 +2,16 @@
 import six
 if six.PY3:
     from queue import LifoQueue
+    from urllib.request import urlopen
 else:
     from Queue import LifoQueue
+    from urllib2 import urlopen
 import socket
 import threading
 import time
 import re
 import json
 from struct import unpack, unpack_from
-
-import comp_urllib
 
 SSDP_ADDR = "239.255.255.250"  # The remote host
 SSDP_PORT = 1900    # The same port as used by the server
@@ -133,7 +133,7 @@ class ControlPoint(object):
         Fetch and parse the device definition, and extract the URL endpoint for
         the camera API service.
         """
-        r = comp_urllib.urlopen(url)
+        r = urlopen(url)
         services = self._parse_device_definition(r.read())
 
         return services['camera']
@@ -281,7 +281,7 @@ class SonyAPI():
                 url = self.QX_ADDR + "/sony/camera"
             json_dump = json.dumps(self.params)
             json_dump_bytes = bytearray(json_dump, 'utf8')
-            read = comp_urllib.urlopen(url, json_dump_bytes).read()
+            read = urlopen(url, json_dump_bytes).read()
             result = eval(read)
         except Exception as e:
             result = "[ERROR] camera doesn't work: " + str(e)
@@ -296,7 +296,7 @@ class SonyAPI():
             self._lilo_jpeg_pool = LifoQueue()
 
         def run(self):
-            sess = comp_urllib.urlopen(self.lv_url)
+            sess = urlopen(self.lv_url)
 
             while True:
                 try:
