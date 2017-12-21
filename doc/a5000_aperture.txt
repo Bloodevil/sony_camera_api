@@ -1,0 +1,112 @@
+Searching for camera...
+Found: http://192.168.122.1:8080
+
+Available calls:
+getVersions
+getMethodTypes
+getApplicationInfo
+getAvailableApiList
+getEvent
+actTakePicture
+stopRecMode
+startLiveview
+stopLiveview
+startLiveviewWithSize
+actZoom
+actHalfPressShutter
+cancelHalfPressShutter
+setSelfTimer
+getSelfTimer
+getAvailableSelfTimer
+getSupportedSelfTimer
+getSupportedContShootingMode
+getSupportedContShootingSpeed
+setExposureMode
+getAvailableExposureMode
+getExposureMode
+getSupportedExposureMode
+setExposureCompensation
+getExposureCompensation
+getAvailableExposureCompensation
+getSupportedExposureCompensation
+setFNumber
+getFNumber
+getAvailableFNumber
+getSupportedFNumber
+setIsoSpeedRate
+getIsoSpeedRate
+getAvailableIsoSpeedRate
+getSupportedIsoSpeedRate
+getLiveviewSize
+getAvailableLiveviewSize
+getSupportedLiveviewSize
+setPostviewImageSize
+getPostviewImageSize
+getAvailablePostviewImageSize
+getSupportedPostviewImageSize
+getSupportedProgramShift
+setShootMode
+getShootMode
+getAvailableShootMode
+getSupportedShootMode
+getShutterSpeed
+getAvailableShutterSpeed
+getSupportedShutterSpeed
+setTouchAFPosition
+getTouchAFPosition
+setWhiteBalance
+getWhiteBalance
+getSupportedWhiteBalance
+getAvailableWhiteBalance
+getSupportedFlashMode
+setFocusMode
+getFocusMode
+getAvailableFocusMode
+getSupportedFocusMode
+setZoomSetting
+getAvailableZoomSetting
+getZoomSetting
+getSupportedZoomSetting
+getStorageInformation
+setLiveviewFrameInfo
+getLiveviewFrameInfo
+--
+trying 'getAvailableApiList()':
+{'result': [['getVersions', 'getMethodTypes', 'getApplicationInfo', 'getAvailableApiList', 'getEvent', 'actTakePicture', 'stopRecMode', 'startLiveview', 'stopLiveview', 'startLiveviewWithSize', 'actZoom', 'actHalfPressShutter', 'cancelHalfPressShutter', 'setSelfTimer', 'getSelfTimer', 'getAvailableSelfTimer', 'getSupportedSelfTimer', 'getSupportedContShootingMode', 'getSupportedContShootingSpeed', 'setExposureMode', 'getAvailableExposureMode', 'getExposureMode', 'getSupportedExposureMode', 'setExposureCompensation', 'getExposureCompensation', 'getAvailableExposureCompensation', 'getSupportedExposureCompensation', 'setFNumber', 'getFNumber', 'getAvailableFNumber', 'getSupportedFNumber', 'setIsoSpeedRate', 'getIsoSpeedRate', 'getAvailableIsoSpeedRate', 'getSupportedIsoSpeedRate', 'getLiveviewSize', 'getAvailableLiveviewSize', 'getSupportedLiveviewSize', 'setPostviewImageSize', 'getPostviewImageSize', 'getAvailablePostviewImageSize', 'getSupportedPostviewImageSize', 'getSupportedProgramShift', 'setShootMode', 'getShootMode', 'getAvailableShootMode', 'getSupportedShootMode', 'getShutterSpeed', 'getAvailableShutterSpeed', 'getSupportedShutterSpeed', 'setTouchAFPosition', 'getTouchAFPosition', 'setWhiteBalance', 'getWhiteBalance', 'getSupportedWhiteBalance', 'getAvailableWhiteBalance', 'getSupportedFlashMode', 'setFocusMode', 'getFocusMode', 'getAvailableFocusMode', 'getSupportedFocusMode', 'setZoomSetting', 'getAvailableZoomSetting', 'getZoomSetting', 'getSupportedZoomSetting', 'getStorageInformation', 'setLiveviewFrameInfo', 'getLiveviewFrameInfo']], 'id': 1}
+
+trying 'getAvailableSelfTimer()':
+{'result': [0, [0, 2, 10]], 'id': 1}
+
+trying 'getAvailableExposureMode()':
+{'result': ['Aperture', ['Program Auto', 'Aperture', 'Shutter', 'Manual', 'Intelligent Auto']], 'id': 1}
+
+trying 'getAvailableExposureCompensation()':
+{'result': [0, 9, -9, 1], 'id': 1}
+
+trying 'getAvailableFNumber()':
+[ERROR] this api is not support in this camera
+
+trying 'getAvailableIsoSpeedRate()':
+{'result': ['AUTO', ['AUTO', '100', '125', '160', '200', '250', '320', '400', '500', '640', '800', '1000', '1250', '1600', '2000', '2500', '3200', '4000', '5000', '6400', '8000', '10000', '12800', '16000']], 'id': 1}
+
+trying 'getAvailableLiveviewSize()':
+{'result': ['M', ['L', 'M']], 'id': 1}
+
+trying 'getAvailablePostviewImageSize()':
+{'result': ['2M', ['Original', '2M']], 'id': 1}
+
+trying 'getAvailableShootMode()':
+{'result': ['still', ['still']], 'id': 1}
+
+trying 'getAvailableShutterSpeed()':
+{'result': ['0.4"', []], 'id': 1}
+
+trying 'getAvailableWhiteBalance()':
+{'result': [{'colorTemperature': -1, 'whiteBalanceMode': 'Auto WB'}, [{'whiteBalanceMode': 'Auto WB', 'colorTemperatureRange': []}, {'whiteBalanceMode': 'Daylight', 'colorTemperatureRange': []}, {'whiteBalanceMode': 'Shade', 'colorTemperatureRange': []}, {'whiteBalanceMode': 'Cloudy', 'colorTemperatureRange': []}, {'whiteBalanceMode': 'Incandescent', 'colorTemperatureRange': []}, {'whiteBalanceMode': 'Fluorescent: Warm White (-1)', 'colorTemperatureRange': []}, {'whiteBalanceMode': 'Fluorescent: Cool White (0)', 'colorTemperatureRange': []}, {'whiteBalanceMode': 'Fluorescent: Day White (+1)', 'colorTemperatureRange': []}, {'whiteBalanceMode': 'Fluorescent: Daylight (+2)', 'colorTemperatureRange': []}, {'whiteBalanceMode': 'Flash', 'colorTemperatureRange': []}, {'whiteBalanceMode': 'Color Temperature', 'colorTemperatureRange': [9900, 2500, 100]}, {'whiteBalanceMode': 'Custom', 'colorTemperatureRange': []}]], 'id': 1}
+
+trying 'getAvailableFocusMode()':
+{'result': ['AF-S', ['AF-S', 'AF-C', 'DMF', 'MF']], 'id': 1}
+
+trying 'getAvailableZoomSetting()':
+{'result': [{'zoom': 'Optical Zoom Only', 'candidate': ['Optical Zoom Only', 'On:Clear Image Zoom', 'On:Digital Zoom']}], 'id': 1}
+

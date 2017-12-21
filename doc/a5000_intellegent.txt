@@ -1,0 +1,108 @@
+Searching for camera...
+Found: http://192.168.122.1:8080
+
+Available calls:
+getVersions
+getMethodTypes
+getApplicationInfo
+getAvailableApiList
+getEvent
+actTakePicture
+stopRecMode
+startLiveview
+stopLiveview
+startLiveviewWithSize
+actZoom
+actHalfPressShutter
+cancelHalfPressShutter
+setSelfTimer
+getSelfTimer
+getAvailableSelfTimer
+getSupportedSelfTimer
+getSupportedContShootingMode
+getSupportedContShootingSpeed
+setExposureMode
+getAvailableExposureMode
+getExposureMode
+getSupportedExposureMode
+getExposureCompensation
+getAvailableExposureCompensation
+getSupportedExposureCompensation
+getFNumber
+getAvailableFNumber
+getSupportedFNumber
+getIsoSpeedRate
+getAvailableIsoSpeedRate
+getSupportedIsoSpeedRate
+getLiveviewSize
+getAvailableLiveviewSize
+getSupportedLiveviewSize
+setPostviewImageSize
+getPostviewImageSize
+getAvailablePostviewImageSize
+getSupportedPostviewImageSize
+getSupportedProgramShift
+setShootMode
+getShootMode
+getAvailableShootMode
+getSupportedShootMode
+getShutterSpeed
+getAvailableShutterSpeed
+getSupportedShutterSpeed
+setTouchAFPosition
+getTouchAFPosition
+getWhiteBalance
+getSupportedWhiteBalance
+getAvailableWhiteBalance
+getSupportedFlashMode
+setFocusMode
+getFocusMode
+getAvailableFocusMode
+getSupportedFocusMode
+setZoomSetting
+getAvailableZoomSetting
+getZoomSetting
+getSupportedZoomSetting
+getStorageInformation
+setLiveviewFrameInfo
+getLiveviewFrameInfo
+--
+trying 'getAvailableApiList()':
+{'result': [['getVersions', 'getMethodTypes', 'getApplicationInfo', 'getAvailableApiList', 'getEvent', 'actTakePicture', 'stopRecMode', 'startLiveview', 'stopLiveview', 'startLiveviewWithSize', 'actZoom', 'actHalfPressShutter', 'cancelHalfPressShutter', 'setSelfTimer', 'getSelfTimer', 'getAvailableSelfTimer', 'getSupportedSelfTimer', 'getSupportedContShootingMode', 'getSupportedContShootingSpeed', 'setExposureMode', 'getAvailableExposureMode', 'getExposureMode', 'getSupportedExposureMode', 'getExposureCompensation', 'getAvailableExposureCompensation', 'getSupportedExposureCompensation', 'getFNumber', 'getAvailableFNumber', 'getSupportedFNumber', 'getIsoSpeedRate', 'getAvailableIsoSpeedRate', 'getSupportedIsoSpeedRate', 'getLiveviewSize', 'getAvailableLiveviewSize', 'getSupportedLiveviewSize', 'setPostviewImageSize', 'getPostviewImageSize', 'getAvailablePostviewImageSize', 'getSupportedPostviewImageSize', 'getSupportedProgramShift', 'setShootMode', 'getShootMode', 'getAvailableShootMode', 'getSupportedShootMode', 'getShutterSpeed', 'getAvailableShutterSpeed', 'getSupportedShutterSpeed', 'setTouchAFPosition', 'getTouchAFPosition', 'getWhiteBalance', 'getSupportedWhiteBalance', 'getAvailableWhiteBalance', 'getSupportedFlashMode', 'setFocusMode', 'getFocusMode', 'getAvailableFocusMode', 'getSupportedFocusMode', 'setZoomSetting', 'getAvailableZoomSetting', 'getZoomSetting', 'getSupportedZoomSetting', 'getStorageInformation', 'setLiveviewFrameInfo', 'getLiveviewFrameInfo']], 'id': 1}
+
+trying 'getAvailableSelfTimer()':
+{'result': [0, [0, 2, 10]], 'id': 1}
+
+trying 'getAvailableExposureMode()':
+{'result': ['Intelligent Auto', ['Program Auto', 'Aperture', 'Shutter', 'Manual', 'Intelligent Auto']], 'id': 1}
+
+trying 'getAvailableExposureCompensation()':
+{'result': [0, 0, 0, 0], 'id': 1}
+
+trying 'getAvailableFNumber()':
+[ERROR] this api is not support in this camera
+
+trying 'getAvailableIsoSpeedRate()':
+{'result': ['AUTO', []], 'id': 1}
+
+trying 'getAvailableLiveviewSize()':
+{'result': ['M', ['L', 'M']], 'id': 1}
+
+trying 'getAvailablePostviewImageSize()':
+{'result': ['2M', ['Original', '2M']], 'id': 1}
+
+trying 'getAvailableShootMode()':
+{'result': ['still', ['still']], 'id': 1}
+
+trying 'getAvailableShutterSpeed()':
+{'result': ['0.4"', []], 'id': 1}
+
+trying 'getAvailableWhiteBalance()':
+{'result': [{'colorTemperature': -1, 'whiteBalanceMode': 'Auto WB'}, []], 'id': 1}
+
+trying 'getAvailableFocusMode()':
+{'result': ['AF-S', ['AF-S', 'DMF', 'MF']], 'id': 1}
+
+trying 'getAvailableZoomSetting()':
+{'result': [{'zoom': 'Optical Zoom Only', 'candidate': ['Optical Zoom Only', 'On:Clear Image Zoom', 'On:Digital Zoom']}], 'id': 1}
+
