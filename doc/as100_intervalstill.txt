@@ -1,0 +1,37 @@
+Searching for camera...
+Found: http://192.168.122.1:10000
+
+Available calls:
+getMethodTypes
+getAvailableApiList
+setShootMode
+getShootMode
+getSupportedShootMode
+getAvailableShootMode
+getSupportedSteadyMode
+getSupportedMovieQuality
+startLiveview
+stopLiveview
+actTakePicture
+startMovieRec
+stopMovieRec
+startIntervalStillRec
+stopIntervalStillRec
+setCameraFunction
+getCameraFunction
+getSupportedCameraFunction
+getAvailableCameraFunction
+getStorageInformation
+getApplicationInfo
+getVersions
+getEvent
+--
+trying 'getAvailableApiList()':
+{'id': 1, 'result': [['getMethodTypes', 'getAvailableApiList', 'setShootMode', 'getShootMode', 'getSupportedShootMode', 'getAvailableShootMode', 'getSupportedSteadyMode', 'getSupportedMovieQuality', 'startLiveview', 'stopLiveview', 'actTakePicture', 'startMovieRec', 'stopMovieRec', 'startIntervalStillRec', 'stopIntervalStillRec', 'setCameraFunction', 'getCameraFunction', 'getSupportedCameraFunction', 'getAvailableCameraFunction', 'getStorageInformation', 'getApplicationInfo', 'getVersions', 'getEvent']]}
+
+trying 'getAvailableShootMode()':
+{'id': 1, 'result': ['intervalstill', ['movie', 'intervalstill', 'still']]}
+
+trying 'getAvailableCameraFunction()':
+{'id': 1, 'result': ['Remote Shooting', ['Remote Shooting', 'Contents Transfer']]}
+
