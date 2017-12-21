@@ -1,10 +1,17 @@
 # Echo client program
+import six
+if six.PY3:
+    from queue import LifoQueue
+    from urllib.request import urlopen
+else:
+    from Queue import LifoQueue
+    from urllib2 import urlopen
 import socket
-import sys
-import xml
+import threading
 import time
 import re
-import urllib2
+import json
+from struct import unpack, unpack_from
 
 SSDP_ADDR = "239.255.255.250"  # The remote host
 SSDP_PORT = 1900    # The same port as used by the server
@@ -35,15 +42,16 @@ class ControlPoint(object):
 
         msg = '\r\n'.join(["M-SEARCH * HTTP/1.1",
                            "HOST: 239.255.255.250:1900",
-                           "MAN: ssdp:discover",
+                           "MAN: \"ssdp:discover\"",
                            "MX: " + str(duration),
                            "ST: " + SSDP_ST,
-                           "USER-AGENT: ",
+                           "USER-AGENT: pysony",
                            "",
                            ""])
 
         # Send the message.
-        self.__udp_socket.sendto(msg, (SSDP_ADDR, SSDP_PORT))
+        msg_bytes = bytearray(msg, 'utf8')
+        self.__udp_socket.sendto(msg_bytes, (SSDP_ADDR, SSDP_PORT))
 
         # Get the responses.
         packets = self._listen_for_discover(duration)
@@ -66,7 +74,7 @@ class ControlPoint(object):
 
                 # Assemble any packets from multiple cameras
                 found = False
-                for x in xrange(len(packets)):
+                for x in range(len(packets)):
                     ohost, oport, odata = packets[x]
                     if host == ohost and port == oport:
                         packets.append((host, port, odata+data))
@@ -80,7 +88,8 @@ class ControlPoint(object):
         return packets
 
     def _parse_ssdp_response(self, data):
-        lines = data.split('\r\n')
+        data_str = data.decode('utf8')
+        lines = data_str.split('\r\n')
         assert lines[0] == 'HTTP/1.1 200 OK'
         headers = {}
         for line in lines[1:]:
@@ -111,8 +120,9 @@ class ControlPoint(object):
             '\s*'
             '</av:X_ScalarWebAPI_Service>')
 
+        doc_str = doc.decode('utf8')
         services = {}
-        for m in re.findall(dd_regex, doc):
+        for m in re.findall(dd_regex, doc_str):
             service_name = m[0]
             endpoint = m[1]
             services[service_name] = endpoint
@@ -123,14 +133,11 @@ class ControlPoint(object):
         Fetch and parse the device definition, and extract the URL endpoint for
         the camera API service.
         """
-        r = urllib2.urlopen(url)
+        r = urlopen(url)
         services = self._parse_device_definition(r.read())
 
         return services['camera']
 
-import collections
-import urllib2
-import json
 
 # Common Header
 # 0--------1--------2--------+--------4----+----+----+----8
@@ -159,15 +166,11 @@ import json
 # | Padding data size ...                                 |
 # ------------------------------JPEG data size + Padding data size
 
-import binascii
 
-def common_header(bytes):
-    start_byte = int(binascii.hexlify(bytes[0]), 16)
-    payload_type = int(binascii.hexlify(bytes[1]), 16)
-    sequence_number = int(binascii.hexlify(bytes[2:4]), 16)
-    time_stamp = int(binascii.hexlify(bytes[4:8]), 16)
+def common_header(data):
+    start_byte,payload_type,sequence_number,time_stamp = unpack('!BBHI', data)
     if start_byte != 255: # 0xff fixed
-        return '[error] wrong QX livestream start byte'
+        raise RuntimeError('[error] wrong QX livestream start byte')
 
     common_header = {'start_byte': start_byte,
                     'payload_type': payload_type,
@@ -176,16 +179,19 @@ def common_header(bytes):
                     }
     return common_header
 
-def payload_header(bytes, payload_type=None):
+def payload_header(data, payload_type=None):
     if payload_type==None:
         payload_type=1	# Assume JPEG
 
-    start_code = int(binascii.hexlify(bytes[0:4]), 16)
-    jpeg_data_size = int(binascii.hexlify(bytes[4:7]), 16)
-    padding_size = int(binascii.hexlify(bytes[7]), 16)
-
+    start_code,jpeg_data_size_2,jpeg_data_size_1,jpeg_data_size_0,padding_size = unpack_from('!IBBBB',data)
     if start_code != 607479929:
-        return '[error] wrong QX payload header start'
+        raise RuntimeError('[error] wrong QX payload header start')
+
+    # This seems silly, but it's a 3-byte-integer !
+    jpeg_data_size = jpeg_data_size_0 * 2**0 + jpeg_data_size_1 * 2**8 + jpeg_data_size_2 * 2**16
+
+    if jpeg_data_size > 100000:
+        print("[D] possibly wrong image size?")
 
     payload_header = {'start_code': start_code,
                       'jpeg_data_size': jpeg_data_size,
@@ -193,39 +199,44 @@ def payload_header(bytes, payload_type=None):
                     }
 
     if payload_type == 1:
-        payload_header.update(payload_header_jpeg(bytes))
+        payload_header.update(payload_header_jpeg(data))
     elif payload_type == 2:
-        payload_header.update(payload_header_frameinfo(bytes))
+        payload_header.update(payload_header_frameinfo(data))
     else:
-        return '[error] unknown payload type'
+        raise RuntimeError('[error] unknown payload type')
 
     return payload_header
 
-def payload_header_jpeg(bytes):
-    reserved_1 = int(binascii.hexlify(bytes[8:12]), 16)
-    flag = int(binascii.hexlify(bytes[12]), 16) # 0x00, fixed
-    reserved_2 = int(binascii.hexlify(bytes[13:]), 16)
+def payload_header_jpeg(data):
+    reserved_1, flag = unpack_from('!IB',data, offset=8)
     if flag != 0:
         return '[error] wrong QX payload header flag'
 
     payload_header = {'reserved_1': reserved_1,
-                      'flag': flag,
-                      'reserved_2':reserved_2,
+                      'flag': flag
                     }
     return payload_header
 
-def payload_header_frameinfo(bytes):
-    version = int(binascii.hexlify(bytes[8:10]), 16)
-    frame_count = int(binascii.hexlify(bytes[10:12]), 16)
-    frame_size = int(binascii.hexlify(bytes[12:14]), 16)
-    reserved_2 = int(binascii.hexlify(bytes[14:]), 16)
-
+def payload_header_frameinfo(data):
+    version, frame_count, frame_size = unpack_from('!HHH', data, offset=8)
     payload_header = {'version': version,
                       'frame_count': frame_count,
-                      'frame_size': frame_size,
-                      'reserved_2':reserved_2,
+                      'frame_size': frame_size
                     }
     return payload_header
+
+def payload_frameinfo(data):
+    left, top, right, bottom = unpack_from(">HHHH", data)
+    category, status, additional = unpack_from("BBB", data, offset=8)
+    payload_frameinfo = {'left': left,
+                      'top': top,
+                      'right': right,
+                      'bottom': bottom,
+                      'category': category,
+                      'status': status,
+                      'additional': additional
+                    }
+    return payload_frameinfo
 
 class SonyAPI():
 
@@ -287,14 +298,82 @@ class SonyAPI():
 
         try:
             if target:
-                result = eval(urllib2.urlopen(self.QX_ADDR + "/sony/" + target, json.dumps(self.params)).read())
+                url = self.QX_ADDR + "/sony/" + target
             else:
-                result = eval(urllib2.urlopen(self.QX_ADDR + "/sony/camera", json.dumps(self.params)).read())
+                url = self.QX_ADDR + "/sony/camera"
+            json_dump = json.dumps(self.params)
+            json_dump_bytes = bytearray(json_dump, 'utf8')
+            read = urlopen(url, json_dump_bytes).read()
+            result = eval(read)
         except Exception as e:
             result = "[ERROR] camera doesn't work" + str(e)
         if method in ["getAvailableApiList"]:
             self.camera_api_list = result["result"][0]
         return result
+
+    # Reading from the streaming data is a part of sony apis
+    class LiveviewStreamThread(threading.Thread):
+        def __init__(self, url):
+            # Direct class call `threading.Thread` instead of `super()` for python2 capability
+            threading.Thread.__init__(self)
+            self.lv_url = url
+            self._lilo_head_pool = LifoQueue()
+            self._lilo_jpeg_pool = LifoQueue()
+
+            self.header = None
+            self.frameinfo = []
+
+        def run(self):
+            sess = urlopen(self.lv_url)
+
+            while True:
+                try:
+                    header = sess.read(8)
+                    ch = common_header(header)
+
+                    data = sess.read(128)
+                    payload = payload_header(data, payload_type=ch['payload_type'])
+
+                    if ch['payload_type'] == 1:
+                        data_img = sess.read(payload['jpeg_data_size'])
+                        assert len(data_img) == payload['jpeg_data_size']
+
+                        self._lilo_head_pool.put(header)
+                        self._lilo_jpeg_pool.put(data_img)
+
+                    elif ch['payload_type'] == 2:
+                        self.frameinfo = []
+
+                        for x in range(payload['frame_count']):
+                            data_img = sess.read(payload['frame_size'])
+                            self.frameinfo.append(payload_frameinfo(data_img))
+
+                    sess.read(payload['padding_size'])
+                except Exception as e:
+                    print("[ERROR]" + str(e))
+
+        def get_header(self):
+            if not self.header:
+                try:
+                    self.header = self._lilo_head_pool.get_nowait()
+                except Exception as e:
+                    self.header = None
+            return self.header
+
+        def get_latest_view(self):
+            # note this is a blocking call
+            data_img = self._lilo_jpeg_pool.get()
+
+            # retrive next header
+            try:
+                self.header = self._lilo_head_pool.get_nowait()
+            except Exception as e:
+                self.header = None
+
+            return data_img
+
+        def get_frameinfo(self):
+            return self.frameinfo
 
     def liveview(self, param=None):
         if not param:
@@ -303,52 +382,52 @@ class SonyAPI():
             liveview = self._cmd(method="startLiveviewWithSize", param=param)
         if isinstance(liveview, dict):
             try:
-                url = liveview['result'][0].replace('\\','')
-                result = urllib2.urlopen(url)
+                url = liveview['result'][0].replace('\\', '')
+                result = url
             except:
-                result = "[ERROR] liveview is dict type but there are no result: " + str(liveview['result'])
+                # Sometimes `liveview` just return json without `result` field (maybe an `error` field instead)
+                result = "[ERROR] liveview is dict type but there are no result: " + str(liveview)
         else:
-            print "[WORN] liveview is not a dict type"
+            print("[WORN] liveview is not a dict type")
             result = liveview
         return result
 
     def setShootMode(self, param=None):
         if not param:
-            print """[ERROR] please enter the param like below
+            print("""[ERROR] please enter the param like below
             "still"            Still image shoot mode
             "movie"            Movie shoot mode
             "audio"            Audio shoot mode
             "intervalstill"    Interval still shoot mode
             e.g) In[26]:  camera.setShootMode(param=['still'])
                  Out[26]: {'id': 1, 'result': [0]}
-            """
+            """)
         return self._cmd(method="setShootMode", param=param)
-
 
     def startLiveviewWithSize(self, param=None):
         if not param:
-            print """[ERROR] please enter the param like below
+            print("""[ERROR] please enter the param like below
         "L"     XGA size scale (the size varies depending on the camera models,
                 and some camera models change the liveview quality instead of
                 making the size larger.)
         "M"     VGA size scale (the size varies depending on the camera models)
-        """
+        """)
 
         return self._cmd(method="startLiveviewWithSize", param=param)
 
     def setLiveviewFrameInfo(self, param=None):
         if not param:
-            print """
+            print("""
         "frameInfo"
                 true - Transfer the liveview frame information
                 false - Not transfer
         e.g) SonyAPI.setLiveviewFrameInfo(param=[{"frameInfo": True}])
-        """
+        """)
         return self._cmd(method="setLiveviewFrameInfo", param=param)
 
     def actZoom(self, param=None):
         if not param:
-            print """ ["direction", "movement"]
+            print(""" ["direction", "movement"]
             direction
                 "in"        Zoom-In
                 "out"       Zoom-Out
@@ -357,17 +436,17 @@ class SonyAPI():
                 "stop"      Stop
                 "1shot"     Short push
             e.g) SonyAPI.actZoom(param=["in", "start"])
-            """
+            """)
         return self._cmd(method="actZoom", param=param)
 
     def setZoomSetting(self, param=None):
         if not param:
-            print """
+            print("""
             "zoom"
                 "Optical Zoom Only"                Optical zoom only.
                 "On:Clear Image Zoom"              On:Clear Image Zoom.
             e.g) SonyAPI.setZoomSetting(param=[{"zoom": "Optical Zoom Only"}])
-            """
+            """)
         return self._cmd(method="setZoomSetting", param=param)
 
     def setLiveviewSize(self, param=None):
@@ -375,20 +454,20 @@ class SonyAPI():
 
     def setTouchAFPosition(self, param=None):
         if not param:
-            print """ [ X-axis position, Y-axis position]
+            print(""" [ X-axis position, Y-axis position]
                 X-axis position     Double
                 Y-axis position     Double
             e.g) SonyAPI.setTouchAFPosition(param=[ 23.2, 45.2 ])
-            """
+            """)
         return self._cmd(method="setTouchAFPosition", param=param)
 
     def actTrackingFocus(self, param=None):
         if not param:
-            print """
+            print("""
                 "xPosition"     double                X-axis position
                 "yPosition"     double                Y-axis position
             e.g) SonyAPI.actTrackingFocus(param={"xPosition":23.2, "yPosition": 45.2})
-            """
+            """)
         return self._cmd(method="actTrackingFocus", param=param)
 
     def setTrackingFocus(self, param=None):
@@ -707,7 +786,7 @@ class SonyAPI():
         return self._cmd(method="getSupportedFNumber")
 
     def getAvailableFNumber(self):
-        return self._cmd(method="getAvailabeFNumber")
+        return self._cmd(method="getAvailableFNumber")
 
     def getShutterSpeed(self):
         return self._cmd(method="getShutterSpeed")

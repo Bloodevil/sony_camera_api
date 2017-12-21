@@ -12,7 +12,7 @@ import time
 import argparse
 from PIL import Image, ImageDraw
 import io
-from pysony import SonyAPI, ControlPoint, common_header, payload_header
+from pysony import SonyAPI, ControlPoint, common_header
 import struct
 import six
 
@@ -113,16 +113,14 @@ class liveview_grabber(threading.Thread):
 
       if 'getAvailableLiveviewSize' in (mode['result'])[0]:
          if options.large and len((camera.getAvailableLiveviewSize()['result'])[0]) > 1:
-            incoming = camera.liveview(["L"])
+            url = camera.liveview(["L"])
          else:
-            incoming = camera.liveview()
+            url = camera.liveview()
       else:
-         incoming = camera.liveview()
+         url = camera.liveview()
 
       incoming_image = None
-      frame_sequence = None
       frame_info = None
-      frame_data = None
 
       # Ensure that we're in correct mode (movie by default)
       mode = camera.getAvailableShootMode()
@@ -140,6 +138,9 @@ class liveview_grabber(threading.Thread):
                   camera.setShootMode(["movie"])
                else:
                   self.photomode = True
+
+      lst = SonyAPI.LiveviewStreamThread(url)
+      lst.start()
 
       while not self.event_terminate.isSet():
          # Handle events from the camera (record start/stop)
@@ -170,22 +171,13 @@ class liveview_grabber(threading.Thread):
                      (self.frame_count, elapsed.seconds + (float(elapsed.microseconds) / 1000000), \
                      self.frame_count / (elapsed.seconds + (float(elapsed.microseconds) / 1000000))))
 
-         # read next image
-         data = incoming.read(8)
-         common = common_header(data)
-         data = incoming.read(128)
+         # read header, confirms image is also ready to read
+         header = lst.get_header()
 
-         if common['payload_type']==1:
-            payload = payload_header(data)
-            image_file = io.BytesIO(incoming.read(payload['jpeg_data_size']))
+         if header:
+            image_file = io.BytesIO(lst.get_latest_view())
             incoming_image = Image.open(image_file)
-            incoming.read(payload['padding_size'])
-         elif common['payload_type']==2:
-            frame_info = payload_header(data, 2)
-            if frame_info['jpeg_data_size']:
-               frame_sequence = common['sequence_number']
-               frame_data =  incoming.read(frame_info['jpeg_data_size'])
-               incoming.read(frame_info['padding_size'])
+            frame_info = lst.get_frameinfo()
 
          if options.gui == True :
             # Correct display size if changed
@@ -207,16 +199,13 @@ class liveview_grabber(threading.Thread):
             if incoming_image:
                image_copy = incoming_image.convert("RGB")
 
-               # only recent frame info to image
-               if frame_info and frame_sequence >= common['sequence_number']-1 \
-                     and frame_info['jpeg_data_size']:
-                  for x in range(frame_info['frame_count']):
-                     x = x * frame_info['frame_size']
-                     (left, top, right, bottom) = struct.unpack(">HHHH", frame_data[x:x+8])
-                     left = left * display.width / 10000
-                     top = top * display.height / 10000
-                     right = right * display.width / 10000
-                     bottom = bottom * display.height / 10000
+               # draw frame info to image
+               if frame_info:
+                  for x in range(len(frame_info)):
+                     left = frame_info[x]['left'] * display.width / 10000
+                     top = frame_info[x]['top'] * display.height / 10000
+                     right = frame_info[x]['right'] * display.width / 10000
+                     bottom = frame_info[x]['bottom'] * display.height / 10000
 
                      dr = ImageDraw.Draw(image_copy)
                      dr.line((left, top, left, bottom), fill="white", width=3)
@@ -226,7 +215,8 @@ class liveview_grabber(threading.Thread):
 
                display.copy_to_offscreen(image_copy)
 
-         if options.debug:
+         if options.debug and header:
+            common = common_header(header)
             print("Frame: %d, %d, %s" % (common['sequence_number'], common['time_stamp'], datetime.datetime.now()))
 
          # count frames

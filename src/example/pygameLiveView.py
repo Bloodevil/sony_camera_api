@@ -1,7 +1,7 @@
 
-from pysony import SonyAPI, ControlPoint, common_header, payload_header
+from pysony import SonyAPI, ControlPoint
+from struct import unpack
 import argparse
-import struct
 import time
 import io
 import pygame
@@ -11,9 +11,6 @@ import six
 # Global Variables
 options  = None
 incoming_image = None
-frame_sequence = None
-frame_info = None
-frame_data = None
 done = False
 
 # =====================================================================
@@ -83,6 +80,7 @@ parser.set_defaults(debug=None, file=None, width=None, height=None)
 parser.add_argument("-l", "--large", action="store_true", dest="large", help="Use HighRes liveview (if available)" )
 parser.add_argument("-i", "--info", action="store_true", dest="info", help="Enable LiveFrameInfo (if available)" )
 parser.add_argument("-z", "--zoom", action="store_true", dest="zoom", help="Zoom image to fill screen" )
+parser.add_argument("-s", "--skip", action="store_true", dest="skip", help="Skip frames if computer too slow" )
 
 options = parser.parse_args()
 
@@ -114,11 +112,14 @@ if 'setLiveviewFrameInfo' in (mode['result'])[0]:
 
 if 'getAvailableLiveviewSize' in (mode['result'])[0]:
    if options.large and len((camera.getAvailableLiveviewSize()['result'])[0]) > 1:
-      incoming = camera.liveview(["L"])
+      url = camera.liveview(["L"])
    else:
-      incoming = camera.liveview()
+      url = camera.liveview()
 else:
-   incoming = camera.liveview()
+   url = camera.liveview()
+
+lst = SonyAPI.LiveviewStreamThread(url)
+lst.start()
 
 # Use PyGame to display images full screen
 disp_no = os.getenv("DISPLAY")
@@ -151,7 +152,8 @@ screen.set_alpha(None)
 # Loop forever, or until user quits or presses 'ESC' key
 pygame.event.set_allowed([pygame.QUIT, pygame.KEYDOWN])
 
-rate = rate_eval()
+if options.skip:
+    rate = rate_eval()
 
 while not done:
     for event in pygame.event.get():
@@ -161,51 +163,45 @@ while not done:
             if event.key == pygame.K_ESCAPE:
                 done = True
 
-    # read next image
-    data = incoming.read(8)
-    common = common_header(data)
-    data = incoming.read(128)
+    # check for header, confirms image is also ready to read
+    header = lst.get_header()
 
-    if common['payload_type']==1:
-       payload = payload_header(data)
-       image_file = io.BytesIO(incoming.read(payload['jpeg_data_size']))
+    if header:
+       # only interested in timestamp so unpack ourselves
+       # could use 'common_header()' if need be
+       time_stamp = unpack('>I', header[4:8])[0]
 
        # Check display rate is better than capture rate
        # only really needed on slow computers (ie. Raspberry Pi)
-       if rate.too_slow(common['time_stamp']):
-          incoming.read(payload['padding_size'])
+       if options.skip and rate.too_slow(time_stamp):
+          lst.get_latest_view()
           continue
 
+       image_file = io.BytesIO(lst.get_latest_view())
        incoming_image = pygame.image.load(image_file).convert()
+
        if options.zoom:
           incoming_image = pygame.transform.scale(incoming_image, \
              (infoObject.current_w, infoObject.current_h))
-       incoming.read(payload['padding_size'])
-    elif common['payload_type']==2:
-       frame_info = payload_header(data, 2)
-       if frame_info['jpeg_data_size']:
-          frame_sequence = common['sequence_number']
-          frame_data =  incoming.read(frame_info['jpeg_data_size'])
-          incoming.read(frame_info['padding_size'])
 
     # copy image to the display
     if incoming_image:
        (origin_x, origin_y, width, height) = incoming_image.get_rect()
 
-       if frame_info:
-          screen.blit(incoming_image,(0,0))
+       if options.info:
+          frame_info = lst.get_frameinfo()
 
-          if frame_sequence >= common['sequence_number']-1 :
-             for x in range(frame_info['frame_count']):
-                x = x * frame_info['frame_size']
+          if frame_info:
+             screen.blit(incoming_image,(0,0))
 
-                (left, top, right, bottom) = struct.unpack(">HHHH", frame_data[x:x+8])
-                left = left * width / 10000
-                top = top * height / 10000
-                right = right * width / 10000
-                bottom = bottom * height / 10000
+             for x in range(len(frame_info)):
+                left = frame_info[x]['left'] * width / 10000
+                top = frame_info[x]['top'] * height / 10000
+                right = frame_info[x]['right'] * width / 10000
+                bottom = frame_info[x]['bottom'] * height / 10000
 
-                (category, status, additional) = struct.unpack("BBB", frame_data[x+8:x+11])
+                category = frame_info[x]['category']
+                status = frame_info[x]['status']
 
                 if category == 1: # Constrast AF
                    # Brackets
@@ -243,8 +239,11 @@ while not done:
                       [(left + 10, bottom), (left, bottom), (left, bottom - 10)], 2)
                    pygame.draw.lines(screen, 0x00ff00, False, \
                       [(right - 10, bottom), (right, bottom), (right, bottom - 10)], 2)
-       else:
-          screen.blit(incoming_image,(0,0))
+          else:
+             screen.blit(incoming_image,(0,0))
+       elif header:
+           # Only blit if it's a new image
+           screen.blit(incoming_image,(0,0))
 
        pygame.display.update((origin_x, origin_y, width, height))
 
