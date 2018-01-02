@@ -1,0 +1,70 @@
+Searching for camera...
+Found: http://192.168.122.1:10000
+
+Supported Versions: ['1.0']
+Checking Methods: Version 1.0
+{'id': 1, 'results': [['actTakePicture', [], ['string*'], '
+1.0'], ['getApplicationInfo', [], ['string', 'string'], '
+1.0'], ['getAvailableApiList', [], ['string*'], '
+1.0'], ['getAvailableCameraFunction', [], ['string', 'string*'], '
+1.0'], ['getAvailableMovieQuality', [], ['string', 'string*'], '
+1.0'], ['getAvailableShootMode', [], ['string', 'string*'], '
+1.0'], ['getAvailableSteadyMode', [], ['string', 'string*'], '
+1.0'], ['getCameraFunction', [], ['string'], '
+1.0'], ['getEvent', ['bool'], ['{"
+type":"string", "names":"string*"}', '{"
+type":"string", "cameraStatus":"string"}', '{"
+type":"string", "zoomPosition":"int", "zoomNumberBox":"int", "zoomIndexCurrentBox":"int", "zoomPositionCurrentBox":"int"}', '{"
+type":"string", "liveviewStatus":"bool"}', '{"
+type":"string", "liveviewOrientation":"string"}', '{"
+type":"string", "takePictureUrl":"string*"}*', '{"
+type":"string", "continuousError":"string", "isContinued":"bool"}*', '{"
+type":"string", "triggeredError":"string*"}', '{"
+type":"string", "sceneRecognition":"string", "steadyRecognition":"string", "motionRecognition":"string"}', '{"
+type":"string", "formatResult":"string"}', '{"
+type":"string", "storageID":"string", "recordTarget":"bool", "numberOfRecordableImages":"int", "recordableTime":"int", "storageDescription":"string"}*', '{"
+type":"string", "currentBeepMode":"string", "beepModeCandidates":"string*"}', '{"
+type":"string", "currentCameraFunction":"string", "cameraFunctionCandidates":"string*"}', '{"
+type":"string", "currentMovieQuality":"string", "movieQualityCandidates":"string*"}', '{"
+type":"string", "checkAvailability":"bool", "currentAspect":"string", "currentSize":"string"}', '{"
+type":"string", "cameraFunctionResult":"string"}', '{"
+type":"string", "currentSteadyMode":"string", "steadyModeCandidates":"string*"}', '{"
+type":"string", "currentViewAngle":"int", "viewAngleCandidates":"int*"}', '{"
+type":"string", "currentExposureMode":"string", "exposureModeCandidates":"string*"}', '{"
+type":"string", "currentPostviewImageSize":"string", "postviewImageSizeCandidates":"string*"}', '{"
+type":"string", "currentSelfTimer":"int", "selfTimerCandidates":"int*"}', '{"
+type":"string", "currentShootMode":"string", "shootModeCandidates":"string*"}', '{"
+type":"string", "currentAELock":"bool", "aeLockCandidates":"bool*"}', '{"
+type":"string", "checkAvailability":"bool", "currentBracketShootMode":"string", "currentBracketShootModeOption":"string"}', '{"
+type":"string", "checkAvailability":"bool", "currentCreativeStyle":"string", "currentCreativeStyleContrast":"int", "currentCreativeStyleSaturation":"int", "currentCreativeStyleSharpness":"int"}', '{"
+type":"string", "currentExposureCompensation":"int", "maxExposureCompensation":"int", "minExposureCompensation":"int", "stepIndexOfExposureCompensation":"int"}', '{"
+type":"string", "currentFlashMode":"string", "flashModeCandidates":"string*"}', '{"
+type":"string", "currentFNumber":"string", "fNumberCandidates":"string*"}', '{"
+type":"string", "currentFocusMode":"string", "focusModeCandidates":"string*"}', '{"
+type":"string", "currentIsoSpeedRate":"string", "isoSpeedRateCandidates":"string*"}', '{"
+type":"string", "checkAvailability":"bool", "currentPictureEffect":"string", "currentPictureEffectOption":"string"}', '{"
+type":"string", "isShifted":"bool"}', '{"
+type":"string", "currentShutterSpeed":"string", "shutterSpeedCandidates":"string*"}', '{"
+type":"string", "checkAvailability":"bool", "currentWhiteBalanceMode":"string", "currentColorTemperature":"int"}', '{"
+type":"string", "currentSet":"bool", "currentTouchCoordinates":"double*"}'], '
+1.0'], ['getMethodTypes', ['string'], ['string', 'string*', 'string*', 'string'], '
+1.0'], ['getMovieQuality', [], ['string'], '
+1.0'], ['getShootMode', [], ['string'], '
+1.0'], ['getSteadyMode', [], ['string'], '
+1.0'], ['getStorageInformation', [], ['{"storageID":"string", "recordTarget":"bool", "numberOfRecordableImages":"int", "recordableTime":"int", "storageDescription":"string"}*'], '
+1.0'], ['getSupportedCameraFunction', [], ['string*'], '
+1.0'], ['getSupportedMovieQuality', [], ['string*'], '
+1.0'], ['getSupportedShootMode', [], ['string*'], '
+1.0'], ['getSupportedSteadyMode', [], ['string*'], '
+1.0'], ['getVersions', [], ['string*'], '
+1.0'], ['setCameraFunction', ['string'], ['int'], '
+1.0'], ['setMovieQuality', ['string'], ['int'], '
+1.0'], ['setShootMode', ['string'], ['int'], '
+1.0'], ['setSteadyMode', ['string'], ['int'], '
+1.0'], ['startIntervalStillRec', [], ['int'], '
+1.0'], ['startLiveview', [], ['string'], '
+1.0'], ['startMovieRec', [], ['int'], '
+1.0'], ['stopIntervalStillRec', [], ['int'], '
+1.0'], ['stopLiveview', [], ['int'], '
+1.0'], ['stopMovieRec', [], ['string'], '
+1.0']]}

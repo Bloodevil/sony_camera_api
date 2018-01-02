@@ -1,0 +1,50 @@
+Searching for camera...
+Found: http://10.0.0.1:10000
+
+Available calls:
+getMethodTypes
+getAvailableApiList
+setShootMode
+getShootMode
+getSupportedShootMode
+getAvailableShootMode
+getSupportedSelfTimer
+getSupportedPostviewImageSize
+startLiveview
+stopLiveview
+actTakePicture
+startMovieRec
+stopMovieRec
+awaitTakePicture
+actZoom
+getSupportedExposureMode
+setBeepMode
+getBeepMode
+getSupportedBeepMode
+getAvailableBeepMode
+setCameraFunction
+getCameraFunction
+getSupportedCameraFunction
+getAvailableCameraFunction
+getSupportedStillSize
+actFormatStorage
+getStorageInformation
+getSupportedExposureCompensation
+getSupportedWhiteBalance
+getSupportedIsoSpeedRate
+getApplicationInfo
+getVersions
+getEvent
+--
+trying 'getAvailableApiList()':
+{'id': 1, 'result': [['getMethodTypes', 'getAvailableApiList', 'setShootMode', 'getShootMode', 'getSupportedShootMode', 'getAvailableShootMode', 'getSupportedSelfTimer', 'getSupportedPostviewImageSize', 'startLiveview', 'stopLiveview', 'actTakePicture', 'startMovieRec', 'stopMovieRec', 'awaitTakePicture', 'actZoom', 'getSupportedExposureMode', 'setBeepMode', 'getBeepMode', 'getSupportedBeepMode', 'getAvailableBeepMode', 'setCameraFunction', 'getCameraFunction', 'getSupportedCameraFunction', 'getAvailableCameraFunction', 'getSupportedStillSize', 'actFormatStorage', 'getStorageInformation', 'getSupportedExposureCompensation', 'getSupportedWhiteBalance', 'getSupportedIsoSpeedRate', 'getApplicationInfo', 'getVersions', 'getEvent']]}
+
+trying 'getAvailableShootMode()':
+{'id': 1, 'result': ['movie', ['still', 'movie']]}
+
+trying 'getAvailableBeepMode()':
+{'id': 1, 'result': ['On', ['Shutter Only', 'On', 'Off']]}
+
+trying 'getAvailableCameraFunction()':
+{'id': 1, 'result': ['Remote Shooting', ['Remote Shooting', 'Contents Transfer']]}
+
