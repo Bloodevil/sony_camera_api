@@ -1,0 +1,29 @@
+Searching for camera...
+Available calls:
+getMethodTypes
+getAvailableApiList
+setShootMode
+getShootMode
+getSupportedShootMode
+getAvailableShootMode
+getSupportedFlashMode
+getSupportedSelfTimer
+startLiveview
+stopLiveview
+actTakePicture
+startMovieRec
+stopMovieRec
+actZoom
+getApplicationInfo
+getVersions
+getEvent
+--
+trying 'getSupportedShootMode()':
+{'id': 1, 'result': [['still', 'movie']]}
+
+trying 'getSupportedFlashMode()':
+[ERROR] camera doesn't workHTTP Error 403: Forbidden
+
+trying 'getSupportedSelfTimer()':
+{'id': 1, 'result': [[0, 2, 10]]}
+
