@@ -299,6 +299,7 @@ class SonyAPI():
             version = minversion
         if version > self.maxversion:
             version = self.maxversion
+        self.params["version"] = version
 
         if method:
             self.params["method"] = method
