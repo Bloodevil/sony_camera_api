@@ -26,20 +26,11 @@ PACKET_BUFFER_SIZE = 1024
 
 class ControlPoint(object):
     def __init__(self):
-        self.__bind_sockets()
-
-    def __bind_sockets(self):
-        self.__udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        self.__udp_socket.settimeout(0.1)
-        return
-
-    def discover(self, duration=None):
-        # Default timeout of 1s
-        if duration==None:
-            duration=1
-
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        sock.settimeout(0.1)
         # Set the socket to broadcast mode.
-        self.__udp_socket.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL , 2)
+        sock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL , 2)
+        self.__udp_socket = sock
 
         msg = '\r\n'.join(["M-SEARCH * HTTP/1.1",
                            "HOST: 239.255.255.250:1900",
@@ -68,25 +59,15 @@ class ControlPoint(object):
 
     def _listen_for_discover(self, duration):
         start = time.time()
-        packets = []
+        packets = {}  # {(host, port): data}
         while (time.time() < (start + duration)):
             try:
                 data, (host, port) = self.__udp_socket.recvfrom(1024)
-
-                # Assemble any packets from multiple cameras
-                found = False
-                for x in range(len(packets)):
-                    ohost, oport, odata = packets[x]
-                    if host == ohost and port == oport:
-                        packets.append((host, port, odata+data))
-                        packets.pop(x)
-                        found = True
-
-                if not found:
-                    packets.append((host, port, data))
-            except:
-                pass
-        return packets
+            except socket.timeout:
+                break
+        packets.setdefault((host, port), b'')
+        packets[host, port] += data
+        return [(host, port, data) for (host, post), data in packets.items()]
 
     def _parse_ssdp_response(self, data):
         data_str = data.decode('utf8')
