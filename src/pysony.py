@@ -32,6 +32,7 @@ class ControlPoint(object):
         sock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL , 2)
         self.__udp_socket = sock
 
+    def discover(self, duration=1):
         msg = '\r\n'.join(["M-SEARCH * HTTP/1.1",
                            "HOST: 239.255.255.250:1900",
                            "MAN: \"ssdp:discover\"",
@@ -162,10 +163,8 @@ def common_header(data):
                     }
     return common_header
 
-def payload_header(data, payload_type=None):
-    if payload_type==None:
-        payload_type=1	# Assume JPEG
-
+def payload_header(data, payload_type=1):
+    # payload_type = 1, assume JPEG
     start_code,jpeg_data_size_2,jpeg_data_size_1,jpeg_data_size_0,padding_size = unpack_from('!IBBBB',data)
     if start_code != 607479929:
         raise RuntimeError('[error] wrong QX payload header start')
@@ -222,10 +221,7 @@ def payload_frameinfo(data):
     return payload_frameinfo
 
 class SonyAPI():
-    def __init__(self, QX_ADDR=None, params=None, debug=None, maxversion=None):
-        if not QX_ADDR:
-            self.QX_ADDR = 'http://10.0.0.1:10000'
-        else:
+    def __init__(self, QX_ADDR='http://10.0.0.1:10000', params=None, debug=None, maxversion=None):
             self.QX_ADDR = QX_ADDR
         if not params:
             self.params = {
