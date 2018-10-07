@@ -51,8 +51,8 @@ class ControlPoint(object):
         endpoints = []
         for host,addr,data in packets:
             resp = self._parse_ssdp_response(data)
-                endpoint = self._read_device_definition(resp['location'])
-                endpoints.append(endpoint)
+            endpoint = self._read_device_definition(resp['location'])
+            endpoints.append(endpoint)
         return endpoints
 
     def _listen_for_discover(self, duration):
@@ -174,9 +174,9 @@ def payload_header(data, payload_type=1):
 
     payload_header = {
         'start_code': start_code,
-                      'jpeg_data_size': jpeg_data_size,
-                      'padding_size': padding_size,
-                    }
+        'jpeg_data_size': jpeg_data_size,
+        'padding_size': padding_size,
+    }
 
     if payload_type == 1:
         payload_header.update(payload_header_jpeg(data))
@@ -194,17 +194,17 @@ def payload_header_jpeg(data):
 
     payload_header = {
         'reserved_1': reserved_1,
-                      'flag': flag
-                    }
+        'flag': flag
+    }
     return payload_header
 
 def payload_header_frameinfo(data):
     version, frame_count, frame_size = unpack_from('!HHH', data, offset=8)
     payload_header = {
         'version': version,
-                      'frame_count': frame_count,
-                      'frame_size': frame_size
-                    }
+        'frame_count': frame_count,
+        'frame_size': frame_size
+    }
     return payload_header
 
 def payload_frameinfo(data):
@@ -212,24 +212,24 @@ def payload_frameinfo(data):
     category, status, additional = unpack_from("BBB", data, offset=8)
     payload_frameinfo = {
         'left': left,
-                      'top': top,
-                      'right': right,
-                      'bottom': bottom,
-                      'category': category,
-                      'status': status,
-                      'additional': additional
-                    }
+        'top': top,
+        'right': right,
+        'bottom': bottom,
+        'category': category,
+        'status': status,
+        'additional': additional
+    }
     return payload_frameinfo
 
 
 class SonyAPI():
     def __init__(self, QX_ADDR='http://10.0.0.1:10000', params=None, debug=None, maxversion=None):
-            self.QX_ADDR = QX_ADDR
+        self.QX_ADDR = QX_ADDR
         if not params:
             self.params = {
-            "method": "",
-            "params": [],
-            "id": 1,  # move to setting
+                "method": "",
+                "params": [],
+                "id": 1,  # move to setting
                 "version": "1.0"
             }
         else:
@@ -267,7 +267,8 @@ class SonyAPI():
         null = None
 
         if self.maxversion < minversion:
-            return "[ERROR] method 'minversion' exceeds user supplied 'maxversion'"
+            raise ValueError("Method %s with 'minversion' %s exceeds user supplied 'maxversion' %s", method, minversion, self.maxversion)
+        
         if version < minversion:
             version = minversion
         if version > self.maxversion:
@@ -281,14 +282,14 @@ class SonyAPI():
         else:
             self.params["params"] = []
 
-            if target:
-                url = self.QX_ADDR + "/sony/" + target
-            else:
-                url = self.QX_ADDR + "/sony/camera"
-            json_dump = json.dumps(self.params)
-            json_dump_bytes = bytearray(json_dump, 'utf8')
-            read = urlopen(url, json_dump_bytes).read()
-            result = eval(read)
+        if target:
+            url = self.QX_ADDR + "/sony/" + target
+        else:
+            url = self.QX_ADDR + "/sony/camera"
+        json_dump = json.dumps(self.params)
+        json_dump_bytes = bytearray(json_dump, 'utf8')
+        read = urlopen(url, json_dump_bytes).read()
+        result = eval(read)
 
         if method in ["getAvailableApiList"]:
             self.camera_api_list = result["result"][0]
@@ -310,27 +311,27 @@ class SonyAPI():
             sess = urlopen(self.lv_url)
 
             while True:
-                    header = sess.read(8)
-                    ch = common_header(header)
+                header = sess.read(8)
+                ch = common_header(header)
 
-                    data = sess.read(128)
-                    payload = payload_header(data, payload_type=ch['payload_type'])
+                data = sess.read(128)
+                payload = payload_header(data, payload_type=ch['payload_type'])
 
-                    if ch['payload_type'] == 1:
-                        data_img = sess.read(payload['jpeg_data_size'])
-                        assert len(data_img) == payload['jpeg_data_size']
+                if ch['payload_type'] == 1:
+                    data_img = sess.read(payload['jpeg_data_size'])
+                    assert len(data_img) == payload['jpeg_data_size']
 
-                        self._lilo_head_pool.put(header)
-                        self._lilo_jpeg_pool.put(data_img)
+                    self._lilo_head_pool.put(header)
+                    self._lilo_jpeg_pool.put(data_img)
 
-                    elif ch['payload_type'] == 2:
-                        self.frameinfo = []
+                elif ch['payload_type'] == 2:
+                    self.frameinfo = []
 
-                        for x in range(payload['frame_count']):
-                            data_img = sess.read(payload['frame_size'])
-                            self.frameinfo.append(payload_frameinfo(data_img))
+                    for x in range(payload['frame_count']):
+                        data_img = sess.read(payload['frame_size'])
+                        self.frameinfo.append(payload_frameinfo(data_img))
 
-                    sess.read(payload['padding_size'])
+                sess.read(payload['padding_size'])
 
         def get_header(self):
             if not self.header:
