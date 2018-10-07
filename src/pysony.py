@@ -172,7 +172,8 @@ def payload_header(data, payload_type=1):
     if jpeg_data_size > 100000:
         logger.debug("Possibly wrong image size (%s)?", jpeg_data_size)
 
-    payload_header = {'start_code': start_code,
+    payload_header = {
+        'start_code': start_code,
                       'jpeg_data_size': jpeg_data_size,
                       'padding_size': padding_size,
                     }
@@ -187,18 +188,20 @@ def payload_header(data, payload_type=1):
     return payload_header
 
 def payload_header_jpeg(data):
-    reserved_1, flag = unpack_from('!IB',data, offset=8)
+    reserved_1, flag = unpack_from('!IB', data, offset=8)
     if flag != 0:
         raise RuntimeError('Wrong QX payload header flag: {}'.format(flag))
 
-    payload_header = {'reserved_1': reserved_1,
+    payload_header = {
+        'reserved_1': reserved_1,
                       'flag': flag
                     }
     return payload_header
 
 def payload_header_frameinfo(data):
     version, frame_count, frame_size = unpack_from('!HHH', data, offset=8)
-    payload_header = {'version': version,
+    payload_header = {
+        'version': version,
                       'frame_count': frame_count,
                       'frame_size': frame_size
                     }
@@ -207,7 +210,8 @@ def payload_header_frameinfo(data):
 def payload_frameinfo(data):
     left, top, right, bottom = unpack_from(">HHHH", data)
     category, status, additional = unpack_from("BBB", data, offset=8)
-    payload_frameinfo = {'left': left,
+    payload_frameinfo = {
+        'left': left,
                       'top': top,
                       'right': right,
                       'bottom': bottom,
@@ -217,6 +221,7 @@ def payload_frameinfo(data):
                     }
     return payload_frameinfo
 
+
 class SonyAPI():
     def __init__(self, QX_ADDR='http://10.0.0.1:10000', params=None, debug=None, maxversion=None):
             self.QX_ADDR = QX_ADDR
@@ -225,7 +230,8 @@ class SonyAPI():
             "method": "",
             "params": [],
             "id": 1,  # move to setting
-            "version": "1.0"}  # move to setting
+                "version": "1.0"
+            }
         else:
             self.params = params
         if not debug:
