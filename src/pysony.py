@@ -365,10 +365,10 @@ class SonyAPI():
             return self.frameinfo
 
     def liveview(self, param=None, version='1.0'):
-        if not param:
-            liveview = self._cmd(method="startLiveview", version=version)
-        else:
+        if param:
             liveview = self._cmd(method="startLiveviewWithSize", param=param, version=version)
+        else:
+            liveview = self._cmd(method="startLiveview", version=version)
         if isinstance(liveview, dict):
             try:
                 url = liveview['result'][0].replace('\\', '')
