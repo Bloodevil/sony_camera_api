@@ -12,6 +12,7 @@ import time
 import re
 import json
 from struct import unpack, unpack_from
+import logging
 
 SSDP_ADDR = "239.255.255.250"  # The remote host
 SSDP_PORT = 1900    # The same port as used by the server
@@ -98,6 +99,7 @@ class ControlPoint(object):
                     key, val = line.split(': ', 1)
                     headers[key.lower()] = val
                 except:
+                    logger.debug("Cannot parse SSDP response for this line: %s", line)
                     pass
         return headers
 
@@ -191,7 +193,7 @@ def payload_header(data, payload_type=None):
     jpeg_data_size = jpeg_data_size_0 * 2**0 + jpeg_data_size_1 * 2**8 + jpeg_data_size_2 * 2**16
 
     if jpeg_data_size > 100000:
-        print("[D] possibly wrong image size?")
+        logger.debug("Possibly wrong image size (%s)?", jpeg_data_size)
 
     payload_header = {'start_code': start_code,
                       'jpeg_data_size': jpeg_data_size,
@@ -398,15 +400,16 @@ class SonyAPI():
                 result = url
             except:
                 # Sometimes `liveview` just return json without `result` field (maybe an `error` field instead)
-                result = "[ERROR] liveview is dict type but there are no result: " + str(liveview)
+                logger.error("Starting liveview returned unkown results: %s", liveview)
+                raise
         else:
-            print("[WORN] liveview is not a dict type")
+            logger.debug("Starting liveview did not returned a dict type: %s", liveview)
             result = liveview
         return result
 
     def setShootMode(self, param=None, version='1.0'):
         if not param:
-            print("""[ERROR] please enter the param like below
+            logger.info("""[ERROR] please enter the param like below
             "still"            Still image shoot mode
             "movie"            Movie shoot mode
             "audio"            Audio shoot mode
@@ -418,7 +421,7 @@ class SonyAPI():
 
     def startLiveviewWithSize(self, param=None, version='1.0'):
         if not param:
-            print("""[ERROR] please enter the param like below
+            logger.info("""[ERROR] please enter the param like below
         "L"     XGA size scale (the size varies depending on the camera models,
                 and some camera models change the liveview quality instead of
                 making the size larger.)
@@ -429,7 +432,7 @@ class SonyAPI():
 
     def setLiveviewFrameInfo(self, param=None, version='1.0'):
         if not param:
-            print("""
+            logger.info("""
         "frameInfo"
                 true - Transfer the liveview frame information
                 false - Not transfer
@@ -439,7 +442,7 @@ class SonyAPI():
 
     def actZoom(self, param=None, version='1.0'):
         if not param:
-            print(""" ["direction", "movement"]
+            logger.info(""" ["direction", "movement"]
             direction
                 "in"        Zoom-In
                 "out"       Zoom-Out
@@ -453,7 +456,7 @@ class SonyAPI():
 
     def setZoomSetting(self, param=None, version='1.0'):
         if not param:
-            print("""
+            logger.info("""
             "zoom"
                 "Optical Zoom Only"                Optical zoom only.
                 "On:Clear Image Zoom"              On:Clear Image Zoom.
@@ -466,7 +469,7 @@ class SonyAPI():
 
     def setTouchAFPosition(self, param=None, version='1.0'):
         if not param:
-            print(""" [ X-axis position, Y-axis position]
+            logger.info(""" [ X-axis position, Y-axis position]
                 X-axis position     Double
                 Y-axis position     Double
             e.g) SonyAPI.setTouchAFPosition(param=[ 23.2, 45.2 ])
@@ -475,7 +478,7 @@ class SonyAPI():
 
     def actTrackingFocus(self, param=None, version='1.0'):
         if not param:
-            print("""
+            logger.info("""
                 "xPosition"     double                X-axis position
                 "yPosition"     double                Y-axis position
             e.g) SonyAPI.actTrackingFocus(param={"xPosition":23.2, "yPosition": 45.2})
