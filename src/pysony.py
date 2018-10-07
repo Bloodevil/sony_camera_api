@@ -51,11 +51,8 @@ class ControlPoint(object):
         endpoints = []
         for host,addr,data in packets:
             resp = self._parse_ssdp_response(data)
-            try:
                 endpoint = self._read_device_definition(resp['location'])
                 endpoints.append(endpoint)
-            except:
-                pass
         return endpoints
 
     def _listen_for_discover(self, duration):
@@ -185,14 +182,14 @@ def payload_header(data, payload_type=1):
     elif payload_type == 2:
         payload_header.update(payload_header_frameinfo(data))
     else:
-        raise RuntimeError('[error] unknown payload type')
+        raise RuntimeError('Unknown payload type: {}'.format(payload_type))
 
     return payload_header
 
 def payload_header_jpeg(data):
     reserved_1, flag = unpack_from('!IB',data, offset=8)
     if flag != 0:
-        return '[error] wrong QX payload header flag'
+        raise RuntimeError('Wrong QX payload header flag: {}'.format(flag))
 
     payload_header = {'reserved_1': reserved_1,
                       'flag': flag
@@ -287,7 +284,6 @@ class SonyAPI():
         else:
             self.params["params"] = []
 
-        try:
             if target:
                 url = self.QX_ADDR + "/sony/" + target
             else:
@@ -296,8 +292,7 @@ class SonyAPI():
             json_dump_bytes = bytearray(json_dump, 'utf8')
             read = urlopen(url, json_dump_bytes).read()
             result = eval(read)
-        except Exception as e:
-            result = "[ERROR] camera doesn't work" + str(e)
+
         if method in ["getAvailableApiList"]:
             self.camera_api_list = result["result"][0]
         return result
@@ -318,7 +313,6 @@ class SonyAPI():
             sess = urlopen(self.lv_url)
 
             while True:
-                try:
                     header = sess.read(8)
                     ch = common_header(header)
 
@@ -340,8 +334,6 @@ class SonyAPI():
                             self.frameinfo.append(payload_frameinfo(data_img))
 
                     sess.read(payload['padding_size'])
-                except Exception as e:
-                    print("[ERROR]" + str(e))
 
         def get_header(self):
             if not self.header:
