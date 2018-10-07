@@ -21,6 +21,9 @@ SSDP_ST = "urn:schemas-sony-com:service:ScalarWebAPI:1"
 SSDP_TIMEOUT = 10000  #msec
 PACKET_BUFFER_SIZE = 1024
 
+logger = logging.getLogger('pysony')
+
+
 # Find all available cameras using uPNP
 # Improved with code from 'https://github.com/storborg/sonypy' under MIT license.
 
