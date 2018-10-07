@@ -266,15 +266,6 @@ class SonyAPI():
         false = False
         null = None
 
-        if not method in ["getAvailableApiList", "liveview"]:
-            if not self.camera_api_list:
-                self.camera_api_list = self.getAvailableApiList()["result"][0]
-            if method not in self.camera_api_list:
-                if self.debug:
-                    print("[WARN] using unsupported camera api: %s" % method)
-                else:
-                    return "[ERROR] this api is not support in this camera"
-
         if self.maxversion < minversion:
             return "[ERROR] method 'minversion' exceeds user supplied 'maxversion'"
         if version < minversion:
