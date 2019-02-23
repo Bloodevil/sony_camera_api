@@ -16,6 +16,8 @@ version = '0.1.12'
 install_requires = [
 ]
 
+test_requirements = ['six>=1.12.0,<2']
+
 setup(name='pysony',
     version = version,
     description = "Sony Camera Remote API for python",
@@ -28,6 +30,8 @@ setup(name='pysony',
     install_requires=install_requires,
     packages=find_packages('src'),
     package_dir = {'': 'src'},
+    test_suite='tests',
+    tests_require=test_requirements,
     py_modules=["pysony"],
     keywords=['sony', 'camera', 'remote', 'api'],
     classifiers=[
