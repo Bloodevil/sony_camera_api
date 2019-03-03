@@ -16,7 +16,7 @@ version = '0.1.12'
 install_requires = [
 ]
 
-test_requirements = ['six>=1.12.0,<2']
+test_requirements = ['six>=1.10.0,<2']
 
 setup(name='pysony',
     version = version,
