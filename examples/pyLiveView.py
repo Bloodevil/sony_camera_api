@@ -4,6 +4,7 @@
 #
 # Sample application to connect to camera, and start a video recording
 # with or without a GUI LiveView screen
+from __future__ import print_function
 
 import signal
 import threading
@@ -18,7 +19,8 @@ import six
 
 # Hack for windows
 import platform
-from cStringIO import StringIO
+
+StringIO = six.StringIO
 
 try:
    import pygtk

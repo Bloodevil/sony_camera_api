@@ -8,7 +8,7 @@ here = os.path.abspath(os.path.dirname(__file__))
 
 try:
     README = open(os.path.join(here, 'README.md')).read()
-except:
+except IOError:
     README = 'https://github.com/Bloodevil/sony_camera_api/blob/master/README.md'
 
 version = '0.1.12'

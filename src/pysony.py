@@ -1,11 +1,4 @@
 # Echo client program
-import six
-if six.PY3:
-    from queue import LifoQueue
-    from urllib.request import urlopen
-else:
-    from Queue import LifoQueue
-    from urllib2 import urlopen
 import socket
 import threading
 import time
@@ -13,6 +6,14 @@ import re
 import json
 from struct import unpack, unpack_from
 import logging
+import sys
+
+if sys.version_info < (3, 0):
+    from Queue import LifoQueue
+    from urllib2 import urlopen
+else:
+    from queue import LifoQueue
+    from urllib.request import urlopen
 
 SSDP_ADDR = "239.255.255.250"  # The remote host
 SSDP_PORT = 1900    # The same port as used by the server

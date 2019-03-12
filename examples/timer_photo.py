@@ -1,10 +1,12 @@
+from __future__ import print_function
+
 from pysony import SonyAPI, payload_header
-import urllib2
-import thread
 import time
 import shutil
 import os
 from flask import Flask, url_for
+
+from six.moves import urllib, _thread
 
 app = Flask(__name__)
 @app.route("/")
@@ -21,9 +23,9 @@ def liveview_and_save(timer=5):
     try:
         live = camera.startLiveview()
         liveview_url = live['result'][0]
-        f = urllib2.urlopen(liveview_url)
-    except:
-        print live
+        f = urllib.request.urlopen(liveview_url)
+    except Exception:
+        print(live)
         raise
     if not os.path.exists("./static"):
         os.makedirs("./static")
@@ -46,6 +48,6 @@ def liveview_and_save(timer=5):
 
 
 if __name__ == "__main__":
-    thread.start_new_thread(liveview_and_save, ())
+    _thread.start_new_thread(liveview_and_save, ())
     if app:
         app.run()
