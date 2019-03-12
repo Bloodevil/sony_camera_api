@@ -28,6 +28,11 @@ api_list
 
  there api list that you can use.
 
+branches
+====
+ develop - please request merge here.
+ master - pip live
+
 examples
 ====
 liveview
