@@ -30,8 +30,8 @@ api_list
 
 branches
 ====
- develop - please request merge here.
- master - pip live
+ - develop : please request merge here.
+ - master : pip live
 
 examples
 ====
