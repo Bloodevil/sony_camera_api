@@ -8,10 +8,10 @@ here = os.path.abspath(os.path.dirname(__file__))
 
 try:
     README = open(os.path.join(here, 'README.md')).read()
-except:
+except IOError:
     README = 'https://github.com/Bloodevil/sony_camera_api/blob/master/README.md'
 
-version = '0.1.11'
+version = '0.1.12'
 
 install_requires = [
 ]
@@ -35,6 +35,6 @@ setup(name='pysony',
         # topic
         # environment ...
         'Programming Language :: Python :: 2',
-        # add python 3
+        'Programming Language :: Python :: 3',
     ],
 )

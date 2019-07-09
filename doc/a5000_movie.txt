@@ -1,0 +1,84 @@
+Note:
+Non standard function, needs to be enabled on camera.
+https://github.com/ma1co/Sony-PMCA-RE/issues/67
+
+Searching for camera...
+Found: http://192.168.122.1:8080
+
+Available calls:
+getVersions
+getMethodTypes
+getApplicationInfo
+getAvailableApiList
+getEvent
+stopRecMode
+startLiveview
+stopLiveview
+startLiveviewWithSize
+getShootMode
+getAvailableShootMode
+getSupportedShootMode
+getAvailableExposureMode
+getExposureMode
+getSupportedExposureMode
+getExposureCompensation
+getAvailableExposureCompensation
+getSupportedExposureCompensation
+getFNumber
+getAvailableFNumber
+getSupportedFNumber
+getIsoSpeedRate
+getAvailableIsoSpeedRate
+getSupportedIsoSpeedRate
+getLiveviewSize
+getAvailableLiveviewSize
+getSupportedLiveviewSize
+getShutterSpeed
+getAvailableShutterSpeed
+getSupportedShutterSpeed
+getWhiteBalance
+getSupportedWhiteBalance
+getAvailableWhiteBalance
+getFocusMode
+getAvailableFocusMode
+getSupportedFocusMode
+getAvailableZoomSetting
+getZoomSetting
+getSupportedZoomSetting
+getStorageInformation
+setLiveviewFrameInfo
+getLiveviewFrameInfo
+--
+trying 'getAvailableApiList()':
+{'result': [['getVersions', 'getMethodTypes', 'getApplicationInfo', 'getAvailableApiList', 'getEvent', 'stopRecMode', 'startLiveview', 'stopLiveview', 'startLiveviewWithSize', 'getShootMode', 'getAvailableShootMode', 'getSupportedShootMode', 'getAvailableExposureMode', 'getExposureMode', 'getSupportedExposureMode', 'getExposureCompensation', 'getAvailableExposureCompensation', 'getSupportedExposureCompensation', 'getFNumber', 'getAvailableFNumber', 'getSupportedFNumber', 'getIsoSpeedRate', 'getAvailableIsoSpeedRate', 'getSupportedIsoSpeedRate', 'getLiveviewSize', 'getAvailableLiveviewSize', 'getSupportedLiveviewSize', 'getShutterSpeed', 'getAvailableShutterSpeed', 'getSupportedShutterSpeed', 'getWhiteBalance', 'getSupportedWhiteBalance', 'getAvailableWhiteBalance', 'getFocusMode', 'getAvailableFocusMode', 'getSupportedFocusMode', 'getAvailableZoomSetting', 'getZoomSetting', 'getSupportedZoomSetting', 'getStorageInformation', 'setLiveviewFrameInfo', 'getLiveviewFrameInfo']], 'id': 1}
+
+trying 'getAvailableShootMode()':
+{'result': ['movie', ['still', 'movie']], 'id': 1}
+
+trying 'getAvailableExposureMode()':
+{'result': ['Program Auto', ['Program Auto', 'Aperture', 'Shutter', 'Manual']], 'id': 1}
+
+trying 'getAvailableExposureCompensation()':
+{'result': [0, 6, -6, 1], 'id': 1}
+
+trying 'getAvailableFNumber()':
+[ERROR] this api is not support in this camera
+
+trying 'getAvailableIsoSpeedRate()':
+{'result': ['AUTO', ['AUTO', '100', '125', '160', '200', '250', '320', '400', '500', '640', '800', '1000', '1250', '1600', '2000', '2500', '3200', '4000', '5000', '6400']], 'id': 1}
+
+trying 'getAvailableLiveviewSize()':
+{'result': ['M', ['L', 'M']], 'id': 1}
+
+trying 'getAvailableShutterSpeed()':
+{'result': ['1\\/50', []], 'id': 1}
+
+trying 'getAvailableWhiteBalance()':
+{'result': [{'colorTemperature': -1, 'whiteBalanceMode': 'Auto WB'}, [{'whiteBalanceMode': 'Auto WB', 'colorTemperatureRange': []}, {'whiteBalanceMode': 'Daylight', 'colorTemperatureRange': []}, {'whiteBalanceMode': 'Shade', 'colorTemperatureRange': []}, {'whiteBalanceMode': 'Cloudy', 'colorTemperatureRange': []}, {'whiteBalanceMode': 'Incandescent', 'colorTemperatureRange': []}, {'whiteBalanceMode': 'Fluorescent: Warm White (-1)', 'colorTemperatureRange': []}, {'whiteBalanceMode': 'Fluorescent: Cool White (0)', 'colorTemperatureRange': []}, {'whiteBalanceMode': 'Fluorescent: Day White (+1)', 'colorTemperatureRange': []}, {'whiteBalanceMode': 'Fluorescent: Daylight (+2)', 'colorTemperatureRange': []}, {'whiteBalanceMode': 'Color Temperature', 'colorTemperatureRange': [9900, 2500, 100]}, {'whiteBalanceMode': 'Custom', 'colorTemperatureRange': []}]], 'id': 1}
+
+trying 'getAvailableFocusMode()':
+{'result': ['AF-C', ['AF-C', 'MF']], 'id': 1}
+
+trying 'getAvailableZoomSetting()':
+{'result': [{'zoom': 'Optical Zoom Only', 'candidate': ['Optical Zoom Only', 'On:Clear Image Zoom', 'On:Digital Zoom']}], 'id': 1}
+

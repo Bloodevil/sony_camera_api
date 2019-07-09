@@ -1,10 +1,19 @@
 # Echo client program
 import socket
-import sys
-import xml
+import threading
 import time
 import re
-import urllib2
+import json
+from struct import unpack, unpack_from
+import logging
+import sys
+
+if sys.version_info < (3, 0):
+    from Queue import LifoQueue
+    from urllib2 import urlopen
+else:
+    from queue import LifoQueue
+    from urllib.request import urlopen
 
 SSDP_ADDR = "239.255.255.250"  # The remote host
 SSDP_PORT = 1900    # The same port as used by the server
@@ -13,74 +22,58 @@ SSDP_ST = "urn:schemas-sony-com:service:ScalarWebAPI:1"
 SSDP_TIMEOUT = 10000  #msec
 PACKET_BUFFER_SIZE = 1024
 
+logger = logging.getLogger('pysony')
+
+
 # Find all available cameras using uPNP
 # Improved with code from 'https://github.com/storborg/sonypy' under MIT license.
 
 class ControlPoint(object):
     def __init__(self):
-        self.__bind_sockets()
-
-    def __bind_sockets(self):
-        self.__udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        self.__udp_socket.settimeout(0.1)
-        return
-
-    def discover(self, duration=None):
-        # Default timeout of 1s
-        if duration==None:
-            duration=1
-
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        sock.settimeout(0.1)
         # Set the socket to broadcast mode.
-        self.__udp_socket.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL , 2)
+        sock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL , 2)
+        self.__udp_socket = sock
 
+    def discover(self, duration=1):
         msg = '\r\n'.join(["M-SEARCH * HTTP/1.1",
                            "HOST: 239.255.255.250:1900",
-                           "MAN: ssdp:discover",
+                           "MAN: \"ssdp:discover\"",
                            "MX: " + str(duration),
                            "ST: " + SSDP_ST,
-                           "USER-AGENT: ",
+                           "USER-AGENT: pysony",
                            "",
                            ""])
 
         # Send the message.
-        self.__udp_socket.sendto(msg, (SSDP_ADDR, SSDP_PORT))
+        msg_bytes = bytearray(msg, 'utf8')
+        self.__udp_socket.sendto(msg_bytes, (SSDP_ADDR, SSDP_PORT))
 
         # Get the responses.
         packets = self._listen_for_discover(duration)
         endpoints = []
         for host,addr,data in packets:
             resp = self._parse_ssdp_response(data)
-            try:
-                endpoint = self._read_device_definition(resp['location'])
-                endpoints.append(endpoint)
-            except:
-                pass
+            endpoint = self._read_device_definition(resp['location'])
+            endpoints.append(endpoint)
         return endpoints
 
     def _listen_for_discover(self, duration):
         start = time.time()
-        packets = []
+        packets = {}  # {(host, port): data}
         while (time.time() < (start + duration)):
             try:
                 data, (host, port) = self.__udp_socket.recvfrom(1024)
-
-                # Assemble any packets from multiple cameras
-                found = False
-                for x in xrange(len(packets)):
-                    ohost, oport, odata = packets[x]
-                    if host == ohost and port == oport:
-                        packets.append((host, port, odata+data))
-                        packets.pop(x)
-                        found = True
-
-                if not found:
-                    packets.append((host, port, data))
-            except:
-                pass
-        return packets
+            except socket.timeout:
+                break
+        packets.setdefault((host, port), b'')
+        packets[host, port] += data
+        return [(host, port, data) for (host, post), data in packets.items()]
 
     def _parse_ssdp_response(self, data):
-        lines = data.split('\r\n')
+        data_str = data.decode('utf8')
+        lines = data_str.split('\r\n')
         assert lines[0] == 'HTTP/1.1 200 OK'
         headers = {}
         for line in lines[1:]:
@@ -89,6 +82,7 @@ class ControlPoint(object):
                     key, val = line.split(': ', 1)
                     headers[key.lower()] = val
                 except:
+                    logger.debug("Cannot parse SSDP response for this line: %s", line)
                     pass
         return headers
 
@@ -111,8 +105,9 @@ class ControlPoint(object):
             '\s*'
             '</av:X_ScalarWebAPI_Service>')
 
+        doc_str = doc.decode('utf8')
         services = {}
-        for m in re.findall(dd_regex, doc):
+        for m in re.findall(dd_regex, doc_str):
             service_name = m[0]
             endpoint = m[1]
             services[service_name] = endpoint
@@ -123,14 +118,11 @@ class ControlPoint(object):
         Fetch and parse the device definition, and extract the URL endpoint for
         the camera API service.
         """
-        r = urllib2.urlopen(url)
+        r = urlopen(url)
         services = self._parse_device_definition(r.read())
 
         return services['camera']
 
-import collections
-import urllib2
-import json
 
 # Common Header
 # 0--------1--------2--------+--------4----+----+----+----8
@@ -159,15 +151,11 @@ import json
 # | Padding data size ...                                 |
 # ------------------------------JPEG data size + Padding data size
 
-import binascii
 
-def common_header(bytes):
-    start_byte = int(binascii.hexlify(bytes[0]), 16)
-    payload_type = int(binascii.hexlify(bytes[1]), 16)
-    sequence_number = int(binascii.hexlify(bytes[2:4]), 16)
-    time_stamp = int(binascii.hexlify(bytes[4:8]), 16)
+def common_header(data):
+    start_byte,payload_type,sequence_number,time_stamp = unpack('!BBHI', data)
     if start_byte != 255: # 0xff fixed
-        return '[error] wrong QX livestream start byte'
+        raise RuntimeError('[error] wrong QX livestream start byte')
 
     common_header = {'start_byte': start_byte,
                     'payload_type': payload_type,
@@ -176,70 +164,78 @@ def common_header(bytes):
                     }
     return common_header
 
-def payload_header(bytes, payload_type=None):
-    if payload_type==None:
-        payload_type=1	# Assume JPEG
-
-    start_code = int(binascii.hexlify(bytes[0:4]), 16)
-    jpeg_data_size = int(binascii.hexlify(bytes[4:7]), 16)
-    padding_size = int(binascii.hexlify(bytes[7]), 16)
-
+def payload_header(data, payload_type=1):
+    # payload_type = 1, assume JPEG
+    start_code,jpeg_data_size_2,jpeg_data_size_1,jpeg_data_size_0,padding_size = unpack_from('!IBBBB',data)
     if start_code != 607479929:
-        return '[error] wrong QX payload header start'
+        raise RuntimeError('[error] wrong QX payload header start')
 
-    payload_header = {'start_code': start_code,
-                      'jpeg_data_size': jpeg_data_size,
-                      'padding_size': padding_size,
-                    }
+    # This seems silly, but it's a 3-byte-integer !
+    jpeg_data_size = jpeg_data_size_0 * 2**0 + jpeg_data_size_1 * 2**8 + jpeg_data_size_2 * 2**16
+
+    if jpeg_data_size > 100000:
+        logger.debug("Possibly wrong image size (%s)?", jpeg_data_size)
+
+    payload_header = {
+        'start_code': start_code,
+        'jpeg_data_size': jpeg_data_size,
+        'padding_size': padding_size,
+    }
 
     if payload_type == 1:
-        payload_header.update(payload_header_jpeg(bytes))
+        payload_header.update(payload_header_jpeg(data))
     elif payload_type == 2:
-        payload_header.update(payload_header_frameinfo(bytes))
+        payload_header.update(payload_header_frameinfo(data))
     else:
-        return '[error] unknown payload type'
+        raise RuntimeError('Unknown payload type: {}'.format(payload_type))
 
     return payload_header
 
-def payload_header_jpeg(bytes):
-    reserved_1 = int(binascii.hexlify(bytes[8:12]), 16)
-    flag = int(binascii.hexlify(bytes[12]), 16) # 0x00, fixed
-    reserved_2 = int(binascii.hexlify(bytes[13:]), 16)
+def payload_header_jpeg(data):
+    reserved_1, flag = unpack_from('!IB', data, offset=8)
     if flag != 0:
-        return '[error] wrong QX payload header flag'
+        raise RuntimeError('Wrong QX payload header flag: {}'.format(flag))
 
-    payload_header = {'reserved_1': reserved_1,
-                      'flag': flag,
-                      'reserved_2':reserved_2,
-                    }
+    payload_header = {
+        'reserved_1': reserved_1,
+        'flag': flag
+    }
     return payload_header
 
-def payload_header_frameinfo(bytes):
-    version = int(binascii.hexlify(bytes[8:10]), 16)
-    frame_count = int(binascii.hexlify(bytes[10:12]), 16)
-    frame_size = int(binascii.hexlify(bytes[12:14]), 16)
-    reserved_2 = int(binascii.hexlify(bytes[14:]), 16)
-
-    payload_header = {'version': version,
-                      'frame_count': frame_count,
-                      'frame_size': frame_size,
-                      'reserved_2':reserved_2,
-                    }
+def payload_header_frameinfo(data):
+    version, frame_count, frame_size = unpack_from('!HHH', data, offset=8)
+    payload_header = {
+        'version': version,
+        'frame_count': frame_count,
+        'frame_size': frame_size
+    }
     return payload_header
+
+def payload_frameinfo(data):
+    left, top, right, bottom = unpack_from(">HHHH", data)
+    category, status, additional = unpack_from("BBB", data, offset=8)
+    payload_frameinfo = {
+        'left': left,
+        'top': top,
+        'right': right,
+        'bottom': bottom,
+        'category': category,
+        'status': status,
+        'additional': additional
+    }
+    return payload_frameinfo
+
 
 class SonyAPI():
-
-    def __init__(self, QX_ADDR=None, params=None, debug=None):
-        if not QX_ADDR:
-            self.QX_ADDR = 'http://10.0.0.1:10000'
-        else:
-            self.QX_ADDR = QX_ADDR
+    def __init__(self, QX_ADDR='http://10.0.0.1:10000', params=None, debug=None, maxversion=None):
+        self.QX_ADDR = QX_ADDR
         if not params:
             self.params = {
-            "method": "",
-            "params": [],
-            "id": 1,  # move to setting
-            "version": "1.0"}  # move to setting
+                "method": "",
+                "params": [],
+                "id": 1,  # move to setting
+                "version": "1.0"
+            }
         else:
             self.params = params
         if not debug:
@@ -247,6 +243,11 @@ class SonyAPI():
         else:
             self.debug = debug
         self.camera_api_list = None
+
+        if not maxversion:
+            self.maxversion = '1.4' # will need to be updated when new API is released
+        else:
+            self.maxversion = maxversion
 
     def _truefalse(self, param):
         params = []
@@ -293,14 +294,14 @@ class SonyAPI():
         false = False
         null = None
 
-        if not method in ["getAvailableApiList", "liveview"]:
-            if not self.camera_api_list:
-                self.camera_api_list = self.getAvailableApiList()["result"][0]
-            if method not in self.camera_api_list:
-                if self.debug:
-                    print("[WARN] using unsupported camera api: %s" % method)
-                else:
-                    return "[ERROR] this api is not support in this camera"
+        if self.maxversion < minversion:
+            raise ValueError("Method %s with 'minversion' %s exceeds user supplied 'maxversion' %s", method, minversion, self.maxversion)
+        
+        if version < minversion:
+            version = minversion
+        if version > self.maxversion:
+            version = self.maxversion
+        self.params["version"] = version
 
         if method:
             self.params["method"] = method
@@ -309,70 +310,134 @@ class SonyAPI():
         else:
             self.params["params"] = []
 
-        try:
-            if target:
-                result = eval(urllib2.urlopen(self.QX_ADDR + "/sony/" + target, json.dumps(self.params)).read())
-            else:
-                result = eval(urllib2.urlopen(self.QX_ADDR + "/sony/camera", json.dumps(self.params)).read())
-        except Exception as e:
-            result = "[ERROR] camera doesn't work" + str(e)
+        if target:
+            url = self.QX_ADDR + "/sony/" + target
+        else:
+            url = self.QX_ADDR + "/sony/camera"
+        json_dump = json.dumps(self.params)
+        json_dump_bytes = bytearray(json_dump, 'utf8')
+        read = urlopen(url, json_dump_bytes).read()
+        result = eval(read)
+
         if method in ["getAvailableApiList"]:
             self.camera_api_list = result["result"][0]
         return result
 
-    def liveview(self, param=None):
-        if not param:
-            liveview = self._cmd(method="startLiveview")
+    # Reading from the streaming data is a part of sony apis
+    class LiveviewStreamThread(threading.Thread):
+        def __init__(self, url):
+            # Direct class call `threading.Thread` instead of `super()` for python2 capability
+            threading.Thread.__init__(self)
+            self.lv_url = url
+            self._lilo_head_pool = LifoQueue()
+            self._lilo_jpeg_pool = LifoQueue()
+
+            self.header = None
+            self.frameinfo = []
+
+        def run(self):
+            sess = urlopen(self.lv_url)
+
+            while True:
+                header = sess.read(8)
+                ch = common_header(header)
+
+                data = sess.read(128)
+                payload = payload_header(data, payload_type=ch['payload_type'])
+
+                if ch['payload_type'] == 1:
+                    data_img = sess.read(payload['jpeg_data_size'])
+                    assert len(data_img) == payload['jpeg_data_size']
+
+                    self._lilo_head_pool.put(header)
+                    self._lilo_jpeg_pool.put(data_img)
+
+                elif ch['payload_type'] == 2:
+                    self.frameinfo = []
+
+                    for x in range(payload['frame_count']):
+                        data_img = sess.read(payload['frame_size'])
+                        self.frameinfo.append(payload_frameinfo(data_img))
+
+                sess.read(payload['padding_size'])
+
+        def get_header(self):
+            if not self.header:
+                try:
+                    self.header = self._lilo_head_pool.get_nowait()
+                except Exception as e:
+                    self.header = None
+            return self.header
+
+        def get_latest_view(self):
+            # note this is a blocking call
+            data_img = self._lilo_jpeg_pool.get()
+
+            # retrive next header
+            try:
+                self.header = self._lilo_head_pool.get_nowait()
+            except Exception as e:
+                self.header = None
+
+            return data_img
+
+        def get_frameinfo(self):
+            return self.frameinfo
+
+    def liveview(self, param=None, version='1.0'):
+        if param:
+            liveview = self._cmd(method="startLiveviewWithSize", param=param, version=version)
         else:
-            liveview = self._cmd(method="startLiveviewWithSize", param=param)
+            liveview = self._cmd(method="startLiveview", version=version)
         if isinstance(liveview, dict):
             try:
-                url = liveview['result'][0].replace('\\','')
-                result = urllib2.urlopen(url)
+                url = liveview['result'][0].replace('\\', '')
+                result = url
             except:
-                result = "[ERROR] liveview is dict type but there are no result: " + str(liveview['result'])
+                # Sometimes `liveview` just return json without `result` field (maybe an `error` field instead)
+                logger.error("Starting liveview returned unkown results: %s", liveview)
+                raise
         else:
-            print "[WORN] liveview is not a dict type"
+            logger.debug("Starting liveview did not returned a dict type: %s", liveview)
             result = liveview
         return result
 
-    def setShootMode(self, param=None):
+    def setShootMode(self, param=None, version='1.0'):
         if not param:
-            print """[ERROR] please enter the param like below
+            logger.info("""[ERROR] please enter the param like below
             "still"            Still image shoot mode
             "movie"            Movie shoot mode
             "audio"            Audio shoot mode
             "intervalstill"    Interval still shoot mode
             e.g) In[26]:  camera.setShootMode(param=['still'])
                  Out[26]: {'id': 1, 'result': [0]}
-            """
-        return self._cmd(method="setShootMode", param=param)
+            """)
+        return self._cmd(method="setShootMode", param=param, version=version)
 
-
-    def startLiveviewWithSize(self, param=None):
+    def startLiveviewWithSize(self, param=None, version='1.0'):
         if not param:
-            print """[ERROR] please enter the param like below
+            logger.info("""[ERROR] please enter the param like below
         "L"     XGA size scale (the size varies depending on the camera models,
                 and some camera models change the liveview quality instead of
                 making the size larger.)
         "M"     VGA size scale (the size varies depending on the camera models)
-        """
+        """)
 
-        return self._cmd(method="startLiveviewWithSize", param=param)
+        return self._cmd(method="startLiveviewWithSize", param=param, version=version)
 
-    def setLiveviewFrameInfo(self, param=None):
+    def setLiveviewFrameInfo(self, param=None, version='1.0'):
         if not param:
-            print """
+            logger.info("""
         "frameInfo"
                 true - Transfer the liveview frame information
                 false - Not transfer
         e.g) SonyAPI.setLiveviewFrameInfo(param=[{"frameInfo": True}])
-        """
-        return self._cmd(method="setLiveviewFrameInfo", param=param)
+        """)
+        return self._cmd(method="setLiveviewFrameInfo", param=param, version=version)
 
-    def actZoom(self, param=None):
+    def actZoom(self, param=None, version='1.0'):
         if not param:
-            print """ ["direction", "movement"]
+            logger.info(""" ["direction", "movement"]
             direction
                 "in"        Zoom-In
                 "out"       Zoom-Out
@@ -381,569 +446,627 @@ class SonyAPI():
                 "stop"      Stop
                 "1shot"     Short push
             e.g) SonyAPI.actZoom(param=["in", "start"])
-            """
-        return self._cmd(method="actZoom", param=param)
+            """)
+        return self._cmd(method="actZoom", param=param, version=version)
 
-    def setZoomSetting(self, param=None):
+    def setZoomSetting(self, param=None, version='1.0'):
         if not param:
-            print """
+            logger.info("""
             "zoom"
                 "Optical Zoom Only"                Optical zoom only.
                 "On:Clear Image Zoom"              On:Clear Image Zoom.
             e.g) SonyAPI.setZoomSetting(param=[{"zoom": "Optical Zoom Only"}])
-            """
+            """)
         return self._cmd(method="setZoomSetting", param=param)
 
-    def setLiveviewSize(self, param=None):
-        return self._cmd(method="setLiveviewSize", param=param)
+    def setLiveviewSize(self, param=None, version='1.0'):
+        return self._cmd(method="setLiveviewSize", param=param, version=version)
 
-    def setTouchAFPosition(self, param=None):
+    def setTouchAFPosition(self, param=None, version='1.0'):
         if not param:
-            print """ [ X-axis position, Y-axis position]
+            logger.info(""" [ X-axis position, Y-axis position]
                 X-axis position     Double
                 Y-axis position     Double
             e.g) SonyAPI.setTouchAFPosition(param=[ 23.2, 45.2 ])
-            """
-        return self._cmd(method="setTouchAFPosition", param=param)
+            """)
+        return self._cmd(method="setTouchAFPosition", param=param, version=version)
 
-    def actTrackingFocus(self, param=None):
+    def actTrackingFocus(self, param=None, version='1.0'):
         if not param:
-            print """
+            logger.info("""
                 "xPosition"     double                X-axis position
                 "yPosition"     double                Y-axis position
             e.g) SonyAPI.actTrackingFocus(param={"xPosition":23.2, "yPosition": 45.2})
-            """
-        return self._cmd(method="actTrackingFocus", param=param)
+            """)
+        return self._cmd(method="actTrackingFocus", param=param, version=version)
 
-    def setTrackingFocus(self, param=None):
-        return self._cmd(method="setTrackingFocus", param=param)
+    def setTrackingFocus(self, param=None, version='1.0'):
+        return self._cmd(
+            method="setTrackingFocus", param=param, version=version)
 
-    def setContShootingMode(self, param=None):
-        return self._cmd(method="setContShootingMode", param=param)
+    def setContShootingMode(self, param=None, version='1.0'):
+        return self._cmd(
+            method="setContShootingMode", param=param, version=version)
 
-    def setContShootingSpeed(self, param=None):
-        return self._cmd(method="setContShootingSpeed", param=param)
+    def setContShootingSpeed(self, param=None, version='1.0'):
+        return self._cmd(
+            method="setContShootingSpeed", param=param, version=version)
 
-    def setSelfTimer(self, param=None):
-        return self._cmd(method="setSelfTimer", param=param)
+    def setSelfTimer(self, param=None, version='1.0'):
+        return self._cmd(
+            method="setSelfTimer", param=param, version=version)
 
-    def setExposureMode(self, param=None):
-        return self._cmd(method="setExposureMode", param=param)
+    def setExposureMode(self, param=None, version='1.0'):
+        return self._cmd(
+            method="setExposureMode", param=param, version=version)
 
-    def setFocusMode(self, param=None):
-        return self._cmd(method="setFocusMode", param=param)
+    def setFocusMode(self, param=None, version='1.0'):
+        return self._cmd(method="setFocusMode", param=param, version=version)
 
-    def setExposureCompensation(self, param=None):
-        return self._cmd(method="setExposureCompensation", param=param)
+    def setExposureCompensation(self, param=None, version='1.0'):
+        return self._cmd(
+            method="setExposureCompensation", param=param, version=version)
 
-    def setFNumber(self, param=None):
-        return self._cmd(method="setFNumber", param=param)
+    def setFNumber(self, param=None, version='1.0'):
+        return self._cmd(method="setFNumber", param=param, version=version)
 
-    def setShutterSpeed(self, param=None):
-        return self._cmd(method="setShutterSpeed", param=param)
+    def setShutterSpeed(self, param=None, version='1.0'):
+        return self._cmd(
+            method="setShutterSpeed", param=param, version=version)
 
-    def setIsoSpeedRate(self, param=None):
-        return self._cmd(method="setIsoSpeedRate", param=param)
+    def setIsoSpeedRate(self, param=None, version='1.0'):
+        return self._cmd(
+            method="setIsoSpeedRate", param=param, version=version)
 
-    def setWhiteBalance(self, param=None):
-        return self._cmd(method="setWhiteBalance", param=param)
+    def setWhiteBalance(self, param=None, version='1.0'):
+        return self._cmd(
+            method="setWhiteBalance", param=param, version=version)
 
-    def setProgramShift(self, param=None):
-        return self._cmd(method="setProgramShift", param=param)
+    def setProgramShift(self, param=None, version='1.0'):
+        return self._cmd(
+            method="setProgramShift", param=param, version=version)
 
-    def setFlashMode(self, param=None):
-        return self._cmd(method="setFlashMode", param=param)
+    def setFlashMode(self, param=None, version='1.0'):
+        return self._cmd(
+            method="setFlashMode", param=param, version=version)
 
-    def setAutoPowerOff(self, param=None):
-        return self._cmd(method="setAutoPowerOff", param=param)
+    def setAutoPowerOff(self, param=None, version='1.0'):
+        return self._cmd(
+            method="setAutoPowerOff", param=param, version=version)
 
-    def setBeepMode(self, param=None):
-        return self._cmd(method="setBeepMode", param=param)
+    def setBeepMode(self, param=None, version='1.0'):
+        return self._cmd(method="setBeepMode", param=param, version=version)
 
-    def setCurrentTime(self, param=None):
-        return self._cmd(method="setCurrentTime", param=param, target="system")
+    def setCurrentTime(self, param=None, version='1.0'):
+        return self._cmd(
+            method="setCurrentTime", param=param,
+            target="system", version=version)
 
-    def setStillSize(self, param=None):
-        return self._cmd(method="setStillSize", param=param)
+    def setStillSize(self, param=None, version='1.0'):
+        return self._cmd(method="setStillSize", param=param, version=version)
 
-    def setStillQuality(self, param=None):
-        return self._cmd(method="setStillQuality", param=param)
+    def setStillQuality(self, param=None, version='1.0'):
+        return self._cmd(
+            method="setStillQuality", param=param, version=version)
 
-    def setPostviewImageSize(self, param=None):
-        return self._cmd(method="setPostviewImageSize", param=param)
+    def setPostviewImageSize(self, param=None, version='1.0'):
+        return self._cmd(
+            method="setPostviewImageSize", param=param, version=version)
 
-    def setMovieFileFormat(self, param=None):
-        return self._cmd(method="setMovieFileFormat", param=param)
+    def setMovieFileFormat(self, param=None, version='1.0'):
+        return self._cmd(
+            method="setMovieFileFormat", param=param, version=version)
 
-    def setMovieQuality(self, param=None):
-        return self._cmd(method="setMovieQuality", param=param)
+    def setMovieQuality(self, param=None, version='1.0'):
+        return self._cmd(
+            method="setMovieQuality", param=param, version=version)
 
-    def setSteadyMode(self, param=None):
-        return self._cmd(method="setSteadyMode", param=param)
+    def setSteadyMode(self, param=None, version='1.0'):
+        return self._cmd(
+            method="setSteadyMode", param=param, version=version)
 
-    def setViewAngle(self, param=None):
-        return self._cmd(method="setViewAngle", param=param)
+    def setViewAngle(self, param=None, version='1.0'):
+        return self._cmd(
+            method="setViewAngle", param=param, version=version)
 
-    def setSceneSelection(self, param=None):
-        return self._cmd(method="setSceneSelection", param=param)
+    def setSceneSelection(self, param=None, version='1.0'):
+        return self._cmd(
+            method="setSceneSelection", param=param, version=version)
 
-    def setColorSetting(self, param=None):
-        return self._cmd(method="setColorSetting", param=param)
+    def setColorSetting(self, param=None, version='1.0'):
+        return self._cmd(
+            method="setColorSetting", param=param, version=version)
 
-    def setIntervalTime(self, param=None):
-        return self._cmd(method="setIntervalTime", param=param)
+    def setIntervalTime(self, param=None, version='1.0'):
+        return self._cmd(
+            method="setIntervalTime", param=param, version=version)
 
-    def setLoopRecTime(self, param=None):
-        return self._cmd(method="setLoopRecTime", param=param)
+    def setLoopRecTime(self, param=None, version='1.0'):
+        return self._cmd(method="setLoopRecTime", param=param, version=version)
 
-    def setFlipSetting(self, param=None):
-        return self._cmd(method="setFlipSetting", param=param)
+    def setFlipSetting(self, param=None, version='1.0'):
+        return self._cmd(method="setFlipSetting", param=param, version=version)
 
-    def setTvColorSystem(self, param=None):
-        return self._cmd(method="setTvColorSystem", param=param)
+    def setTvColorSystem(self, param=None, version='1.0'):
+        return self._cmd(
+            method="setTvColorSystem", param=param, version=version)
 
-    def startRecMode(self):
-        return self._cmd(method="startRecMode")
+    def startRecMode(self, version='1.0'):
+        return self._cmd(method="startRecMode", version=version)
 
-    def stopRecMode(self):
-        return self._cmd(method="stopRecMode")
+    def stopRecMode(self, version='1.0'):
+        return self._cmd(method="stopRecMode", version=version)
 
-    def getCameraFunction(self):
-        return self._cmd(method="getCameraFunction")
+    def getCameraFunction(self, version='1.0'):
+        return self._cmd(method="getCameraFunction", version=version)
 
-    def getSupportedCameraFunction(self):
-        return self._cmd(method="getSupportedCameraFunction")
+    def getSupportedCameraFunction(self, version='1.0'):
+        return self._cmd(method="getSupportedCameraFunction", version=version)
 
-    def getAvailableCameraFunction(self):
-        return self._cmd(method="getAvailableCameraFunction")
+    def getAvailableCameraFunction(self, version='1.0'):
+        return self._cmd(method="getAvailableCameraFunction", version=version)
 
-    def getAudioRecording(self):
-        return self._cmd(method="getAudioRecording")
+    def getAudioRecording(self, version='1.0'):
+        return self._cmd(method="getAudioRecording", version=version)
 
-    def getSupportedAudioRecording(self):
-        return self._cmd(method="getSupportedAudioRecording")
+    def getSupportedAudioRecording(self, version='1.0'):
+        return self._cmd(method="getSupportedAudioRecording", version=version)
 
-    def getAvailableAudioRecording(self):
-        return self._cmd(method="getAvailableAudioRecording")
+    def getAvailableAudioRecording(self, version='1.0'):
+        return self._cmd(method="getAvailableAudioRecording", version=version)
 
-    def getWindNoiseReduction(self):
-        return self._cmd(method="getWindNoiseReduction")
+    def getWindNoiseReduction(self, version='1.0'):
+        return self._cmd(method="getWindNoiseReduction", version=version)
 
-    def getSupportedWindNoiseReduction(self):
-        return self._cmd(method="getSupportedWindNoiseReduction")
+    def getSupportedWindNoiseReduction(self, version='1.0'):
+        return self._cmd(
+            method="getSupportedWindNoiseReduction", version=version)
 
-    def getAvailableWindNoiseReduction(self):
-        return self._cmd(method="getAvailableWindNoiseReduction")
+    def getAvailableWindNoiseReduction(self, version='1.0'):
+        return self._cmd(
+            method="getAvailableWindNoiseReduction", version=version)
 
-    def setCameraFunction(self, param=None):
-        return self._cmd(method="setCameraFunction", param=param)
+    def setCameraFunction(self, param=None, version='1.0'):
+        return self._cmd(
+            method="setCameraFunction", param=param, version=version)
 
-    def setAudioRecording(self, param=None):
-        return self._cmd(method="setAudioRecording", param=param)
+    def setAudioRecording(self, param=None, version='1.0'):
+        return self._cmd(
+            method="setAudioRecording", param=param, version=version)
 
-    def setWindNoiseReduction(self, param=None):
-        return self._cmd(method="setWindNoiseReduction", param=param)
+    def setWindNoiseReduction(self, param=None, version='1.0'):
+        return self._cmd(
+            method="setWindNoiseReduction", param=param, version=version)
 
-    def getSourceList(self, param=None):
-        return self._cmd(method="getSourceList", param=param, target="avContent")
+    def getSourceList(self, param=None, version='1.0'):
+        return self._cmd(
+            method="getSourceList", param=param,
+            target="avContent", version=version)
 
-    def getContentCount(self, param=None):
-        return self._cmd(method="getContentCount", param=param, target="avContent")
+    def getContentCount(self, param=None, version='1.2'):
+        return self._cmd(
+            method="getContentCount", param=param,
+            target="avContent", version=version, minversion='1.2')
 
-    def getContentList(self, param=None):
-        return self._cmd(method="getContentList", param=param, target="avContent")
+    def getContentList(self, param=None, version='1.3'):
+        return self._cmd(
+            method="getContentList", param=param,
+            target="avContent", version=version, minversion='1.3')
 
-    def setStreamingContent(self, param=None):
-        return self._cmd(method="setStreamingContent", param=param, target="avContent")
+    def setStreamingContent(self, param=None, version='1.0'):
+        return self._cmd(
+            method="setStreamingContent", param=param,
+            target="avContent", version=version)
 
-    def seekStreamingPosition(self, param=None):
-        return self._cmd(method="seekStreamingPosition", param=param, target="avContent")
+    def seekStreamingPosition(self, param=None, version='1.0'):
+        return self._cmd(
+            method="seekStreamingPosition", param=param,
+            target="avContent", version=version)
 
-    def requestToNotifyStreamingStatus(self, param=None):
-        return self._cmd(method="requestToNotifyStreamingStatus", param=param, target="avContent")
+    def requestToNotifyStreamingStatus(self, param=None, version='1.0'):
+        return self._cmd(
+            method="requestToNotifyStreamingStatus",
+            param=param, target="avContent", version=version)
 
-    def deleteContent(self, param=None):
-        return self._cmd(method="deleteContent", param=param, target="avContent")
+    def deleteContent(self, param=None, version='1.1'):
+        return self._cmd(
+            method="deleteContent", param=param,
+            target="avContent", version=version, minversion='1.1')
 
-    def setInfraredRemoteControl(self, param=None):
-        return self._cmd(method="setInfraredRemoteControl", param=param)
+    def setInfraredRemoteControl(self, param=None, version='1.0'):
+        return self._cmd(
+            method="setInfraredRemoteControl", param=param, version=version)
 
-    def getEvent(self, param=None):
-        return self._cmd(method="getEvent", param=param)
+    def getEvent(self, param=None, version='1.3'):
+        return self._cmd(method="getEvent", param=param, version=version)
 
-    def getMethodTypes(self, param=None, target=None): # camera, system and avContent
-        return self._cmd(method="getMethodTypes", param=param, target=None)
+    def getMethodTypes(self, param=None, target=None, version='1.0'):
+        return self._cmd(
+            method="getMethodTypes", param=param, target=None, version=version)
 
-    def getShootMode(self):
-        return self._cmd(method="getShootMode")
+    def getShootMode(self, version='1.0'):
+        return self._cmd(method="getShootMode", version=version)
 
-    def getSupportedShootMode(self):
-        return self._cmd(method="getSupportedShootMode")
+    def getSupportedShootMode(self, version='1.0'):
+        return self._cmd(method="getSupportedShootMode", version=version)
 
-    def getAvailableShootMode(self):
-        return self._cmd(method="getAvailableShootMode")
+    def getAvailableShootMode(self, version='1.0'):
+        return self._cmd(method="getAvailableShootMode", version=version)
 
-    def actTakePicture(self):
-        return self._cmd(method="actTakePicture")
+    def actTakePicture(self, version='1.0'):
+        return self._cmd(method="actTakePicture", version=version)
 
-    def awaitTakePicture(self):
-        return self._cmd(method="awaitTakePicture")
+    def awaitTakePicture(self, version='1.0'):
+        return self._cmd(method="awaitTakePicture", version=version)
 
-    def startContShooting(self):
-        return self._cmd(method="startContShooting")
+    def startContShooting(self, version='1.0'):
+        return self._cmd(method="startContShooting", version=version)
 
-    def stopContShooting(self):
-        return self._cmd(method="stopContShooting")
+    def stopContShooting(self, version='1.0'):
+        return self._cmd(method="stopContShooting", version=version)
 
-    def startMovieRec(self):
-        return self._cmd(method="startMovieRec")
+    def startMovieRec(self, version='1.0'):
+        return self._cmd(method="startMovieRec", version=version)
 
-    def stopMovieRec(self):
-        return self._cmd(method="stopMovieRec")
+    def stopMovieRec(self, version='1.0'):
+        return self._cmd(method="stopMovieRec", version=version)
 
-    def startLoopRec(self):
-        return self._cmd(method="startLoopRec")
+    def startLoopRec(self, version='1.0'):
+        return self._cmd(method="startLoopRec", version=version)
 
-    def stopLoopRec(self):
-        return self._cmd(method="stopLoopRec")
+    def stopLoopRec(self, version='1.0'):
+        return self._cmd(method="stopLoopRec", version=version)
 
-    def startAudioRec(self):
-        return self._cmd(method="startAudioRec")
+    def startAudioRec(self, version='1.0'):
+        return self._cmd(method="startAudioRec", version=version)
 
-    def stopAudioRec(self):
-        return self._cmd(method="stopAudioRec")
+    def stopAudioRec(self, version='1.0'):
+        return self._cmd(method="stopAudioRec", version=version)
 
-    def startIntervalStillRec(self):
-        return self._cmd(method="startIntervalStillRec")
+    def startIntervalStillRec(self, version='1.0'):
+        return self._cmd(method="startIntervalStillRec", version=version)
 
-    def stopIntervalStillRec(self):
-        return self._cmd(method="stopIntervalStillRec")
+    def stopIntervalStillRec(self, version='1.0'):
+        return self._cmd(method="stopIntervalStillRec", version=version)
 
-    def startLiveview(self):
-        return self._cmd(method="startLiveview")
+    def startLiveview(self, version='1.0'):
+        return self._cmd(method="startLiveview", version=version)
 
-    def stopLiveview(self):
-        return self._cmd(method="stopLiveview")
+    def stopLiveview(self, version='1.0'):
+        return self._cmd(method="stopLiveview", version=version)
 
-    def getLiveviewSize(self):
-        return self._cmd(method="getLiveviewSize")
+    def getLiveviewSize(self, version='1.0'):
+        return self._cmd(method="getLiveviewSize", version=version)
 
-    def getSupportedLiveviewSize(self):
-        return self._cmd(method="getSupportedLiveviewSize")
+    def getSupportedLiveviewSize(self, version='1.0'):
+        return self._cmd(method="getSupportedLiveviewSize", version=version)
 
-    def getAvailableLiveviewSize(self):
-        return self._cmd(method="getAvailableLiveviewSize")
+    def getAvailableLiveviewSize(self, version='1.0'):
+        return self._cmd(method="getAvailableLiveviewSize", version=version)
 
-    def getLiveviewFrameInfo(self):
-        return self._cmd(method="getLiveviewFrameInfo")
+    def getLiveviewFrameInfo(self, version='1.0'):
+        return self._cmd(method="getLiveviewFrameInfo", version=version)
 
-    def getZoomSetting(self):
-        return self._cmd(method="getZoomSetting")
+    def getZoomSetting(self, version='1.0'):
+        return self._cmd(method="getZoomSetting", version=version)
 
-    def getSupportedZoomSetting(self):
-        return self._cmd(method="getSupportedZoomSetting")
+    def getSupportedZoomSetting(self, version='1.0'):
+        return self._cmd(method="getSupportedZoomSetting", version=version)
 
-    def getAvailableZoomSetting(self):
-        return self._cmd(method="getAvailableZoomSetting")
+    def getAvailableZoomSetting(self, version='1.0'):
+        return self._cmd(method="getAvailableZoomSetting", version=version)
 
-    def actHalfPressShutter(self):
-        return self._cmd(method="actHalfPressShutter")
+    def actHalfPressShutter(self, version='1.0'):
+        return self._cmd(method="actHalfPressShutter", version=version)
 
-    def cancelHalfPressShutter(self):
-        return self._cmd(method="cancelHalfPressShutter")
+    def cancelHalfPressShutter(self, version='1.0'):
+        return self._cmd(method="cancelHalfPressShutter", version=version)
 
-    def getTouchAFPosition(self):
-        return self._cmd(method="getTouchAFPosition")
+    def getTouchAFPosition(self, version='1.0'):
+        return self._cmd(method="getTouchAFPosition", version=version)
 
-    def cancelTouchAFPosition(self):
-        return self._cmd(method="cancelTouchAFPosition")
+    def cancelTouchAFPosition(self, version='1.0'):
+        return self._cmd(method="cancelTouchAFPosition", version=version)
 
-    def cancelTrackingFocus(self):
-        return self._cmd(method="cancelTrackingFocus")
+    def cancelTrackingFocus(self, version='1.0'):
+        return self._cmd(method="cancelTrackingFocus", version=version)
 
-    def getTrackingFocus(self):
-        return self._cmd(method="getTrackingFocus")
+    def getTrackingFocus(self, version='1.0'):
+        return self._cmd(method="getTrackingFocus", version=version)
 
-    def getSupportedTrackingFocus(self):
-        return self._cmd(method="getSupportedTrackingFocus")
+    def getSupportedTrackingFocus(self, version='1.0'):
+        return self._cmd(method="getSupportedTrackingFocus", version=version)
 
-    def getAvailableTrackingFocus(self):
-        return self._cmd(method="getAvailableTrackingFocus")
+    def getAvailableTrackingFocus(self, version='1.0'):
+        return self._cmd(method="getAvailableTrackingFocus", version=version)
 
-    def getContShootingMode(self):
-        return self._cmd(method="getContShootingMode")
+    def getContShootingMode(self, version='1.0'):
+        return self._cmd(method="getContShootingMode", version=version)
 
-    def getSupportedContShootingMode(self):
-        return self._cmd(method="getSupportedContShootingMode")
+    def getSupportedContShootingMode(self, version='1.0'):
+        return self._cmd(
+            method="getSupportedContShootingMode", version=version)
 
-    def getAvailableContShootingMode(self):
-        return self._cmd(method="getAvailableContShootingMode")
+    def getAvailableContShootingMode(self, version='1.0'):
+        return self._cmd(
+            method="getAvailableContShootingMode", version=version)
 
-    def getContShootingSpeed(self):
-        return self._cmd(method="getContShootingSpeed")
+    def getContShootingSpeed(self, version='1.0'):
+        return self._cmd(method="getContShootingSpeed", version=version)
 
-    def getSupportedContShootingSpeed(self):
-        return self._cmd(method="getSupportedContShootingSpeed")
+    def getSupportedContShootingSpeed(self, version='1.0'):
+        return self._cmd(
+            method="getSupportedContShootingSpeed", version=version)
 
-    def getAvailableContShootingSpeed(self):
-        return self._cmd(method="getAvailableContShootingSpeed")
+    def getAvailableContShootingSpeed(self, version='1.0'):
+        return self._cmd(
+            method="getAvailableContShootingSpeed", version=version)
 
-    def getSelfTimer(self):
-        return self._cmd(method="getSelfTimer")
+    def getSelfTimer(self, version='1.0'):
+        return self._cmd(method="getSelfTimer", version=version)
 
-    def getSupportedSelfTimer(self):
-        return self._cmd(method="getSupportedSelfTimer")
+    def getSupportedSelfTimer(self, version='1.0'):
+        return self._cmd(method="getSupportedSelfTimer", version=version)
 
-    def getAvailableSelfTimer(self):
-        return self._cmd(method="getAvailableSelfTimer")
+    def getAvailableSelfTimer(self, version='1.0'):
+        return self._cmd(method="getAvailableSelfTimer", version=version)
 
-    def getExposureMode(self):
-        return self._cmd(method="getExposureMode")
+    def getExposureMode(self, version='1.0'):
+        return self._cmd(method="getExposureMode", version=version)
 
-    def getSupportedExposureMode(self):
-        return self._cmd(method="getSupportedExposureMode")
+    def getSupportedExposureMode(self, version='1.0'):
+        return self._cmd(method="getSupportedExposureMode", version=version)
 
-    def getAvailableExposureMode(self):
-        return self._cmd(method="getAvailableExposureMode")
+    def getAvailableExposureMode(self, version='1.0'):
+        return self._cmd(method="getAvailableExposureMode", version=version)
 
-    def getFocusMode(self):
-        return self._cmd(method="getFocusMode")
+    def getFocusMode(self, version='1.0'):
+        return self._cmd(method="getFocusMode", version=version)
 
-    def getSupportedFocusMode(self):
-        return self._cmd(method="getSupportedFocusMode")
+    def getSupportedFocusMode(self, version='1.0'):
+        return self._cmd(method="getSupportedFocusMode", version=version)
 
-    def getAvailableFocusMode(self):
-        return self._cmd(method="getAvailableFocusMode")
+    def getAvailableFocusMode(self, version='1.0'):
+        return self._cmd(method="getAvailableFocusMode", version=version)
 
-    def getExposureCompensation(self):
-        return self._cmd(method="getExposureCompensation")
+    def getExposureCompensation(self, version='1.0'):
+        return self._cmd(method="getExposureCompensation", version=version)
 
-    def getSupportedExposureCompensation(self):
-        return self._cmd(method="getSupportedExposureCompensation")
+    def getSupportedExposureCompensation(self, version='1.0'):
+        return self._cmd(
+            method="getSupportedExposureCompensation", version=version)
 
-    def getAvailableExposureCompensation(self):
-        return self._cmd(method="getAvailableExposureCompensation")
+    def getAvailableExposureCompensation(self, version='1.0'):
+        return self._cmd(
+            method="getAvailableExposureCompensation", version=version)
 
-    def getFNumber(self):
-        return self._cmd(method="getFNumber")
+    def getFNumber(self, version='1.0'):
+        return self._cmd(method="getFNumber", version=version)
 
-    def getSupportedFNumber(self):
-        return self._cmd(method="getSupportedFNumber")
+    def getSupportedFNumber(self, version='1.0'):
+        return self._cmd(method="getSupportedFNumber", version=version)
 
-    def getAvailableFNumber(self):
-        return self._cmd(method="getAvailabeFNumber")
+    def getAvailableFNumber(self, version='1.0'):
+        return self._cmd(method="getAvailableFNumber", version=version)
 
-    def getShutterSpeed(self):
-        return self._cmd(method="getShutterSpeed")
+    def getShutterSpeed(self, version='1.0'):
+        return self._cmd(method="getShutterSpeed", version=version)
 
-    def getSupportedShutterSpeed(self):
-        return self._cmd(method="getSupportedShutterSpeed")
+    def getSupportedShutterSpeed(self, version='1.0'):
+        return self._cmd(method="getSupportedShutterSpeed", version=version)
 
-    def getAvailableShutterSpeed(self):
-        return self._cmd(method="getAvailableShutterSpeed")
+    def getAvailableShutterSpeed(self, version='1.0'):
+        return self._cmd(method="getAvailableShutterSpeed", version=version)
 
-    def getIsoSpeedRate(self):
-        return self._cmd(method="getIsoSpeedRate")
+    def getIsoSpeedRate(self, version='1.0'):
+        return self._cmd(method="getIsoSpeedRate", version=version)
 
-    def getSupportedIsoSpeedRate(self):
-        return self._cmd(method="getSupportedIsoSpeedRate")
+    def getSupportedIsoSpeedRate(self, version='1.0'):
+        return self._cmd(method="getSupportedIsoSpeedRate", version=version)
 
-    def getAvailableIsoSpeedRate(self):
-        return self._cmd(method="getAvailableIsoSpeedRate")
+    def getAvailableIsoSpeedRate(self, version='1.0'):
+        return self._cmd(method="getAvailableIsoSpeedRate", version=version)
 
-    def getWhiteBalance(self):
-        return self._cmd(method="getWhiteBalance")
+    def getWhiteBalance(self, version='1.0'):
+        return self._cmd(method="getWhiteBalance", version=version)
 
-    def getSupportedWhiteBalance(self):
-        return self._cmd(method="getSupportedWhiteBalance")
+    def getSupportedWhiteBalance(self, version='1.0'):
+        return self._cmd(method="getSupportedWhiteBalance", version=version)
 
-    def getAvailableWhiteBalance(self):
-        return self._cmd(method="getAvailableWhiteBalance")
+    def getAvailableWhiteBalance(self, version='1.0'):
+        return self._cmd(method="getAvailableWhiteBalance", version=version)
 
-    def actWhiteBalanceOnePushCustom(self):
-        return self._cmd(method="actWhiteBalanceOnePushCustom")
+    def actWhiteBalanceOnePushCustom(self, version='1.0'):
+        return self._cmd(
+            method="actWhiteBalanceOnePushCustom", version=version)
 
-    def getSupportedProgramShift(self):
-        return self._cmd(method="getSupportedProgramShift")
+    def getSupportedProgramShift(self, version='1.0'):
+        return self._cmd(method="getSupportedProgramShift", version=version)
 
-    def getFlashMode(self):
-        return self._cmd(method="getFlashMode")
+    def getFlashMode(self, version='1.0'):
+        return self._cmd(method="getFlashMode", version=version)
 
-    def getSupportedFlashMode(self):
-        return self._cmd(method="getSupportedFlashMode")
+    def getSupportedFlashMode(self, version='1.0'):
+        return self._cmd(method="getSupportedFlashMode", version=version)
 
-    def getAvailableFlashMode(self):
-        return self._cmd(method="getAvailableFlashMode")
+    def getAvailableFlashMode(self, version='1.0'):
+        return self._cmd(method="getAvailableFlashMode", version=version)
 
-    def getStillSize(self):
-        return self._cmd(method="getStillSize")
+    def getStillSize(self, version='1.0'):
+        return self._cmd(method="getStillSize", version=version)
 
-    def getSupportedStillSize(self):
-        return self._cmd(method="getSupportedStillSize")
+    def getSupportedStillSize(self, version='1.0'):
+        return self._cmd(method="getSupportedStillSize", version=version)
 
-    def getAvailableStillSize(self):
-        return self._cmd(method="getAvailableStillSize")
+    def getAvailableStillSize(self, version='1.0'):
+        return self._cmd(method="getAvailableStillSize", version=version)
 
-    def getStillQuality(self):
-        return self._cmd(method="getStillQuality")
+    def getStillQuality(self, version='1.0'):
+        return self._cmd(method="getStillQuality", version=version)
 
-    def getSupportedStillQuality(self):
-        return self._cmd(method="getSupportedStillQuality")
+    def getSupportedStillQuality(self, version='1.0'):
+        return self._cmd(method="getSupportedStillQuality", version=version)
 
-    def getAvailableStillQuality(self):
-        return self._cmd(method="getAvailableStillQuality")
+    def getAvailableStillQuality(self, version='1.0'):
+        return self._cmd(method="getAvailableStillQuality", version=version)
 
-    def getPostviewImageSize(self):
-        return self._cmd(method="getPostviewImageSize")
+    def getPostviewImageSize(self, version='1.0'):
+        return self._cmd(method="getPostviewImageSize", version=version)
 
-    def getSupportedPostviewImageSize(self):
-        return self._cmd(method="getSupportedPostviewImageSize")
+    def getSupportedPostviewImageSize(self, version='1.0'):
+        return self._cmd(
+            method="getSupportedPostviewImageSize", version=version)
 
-    def getAvailablePostviewImageSize(self):
-        return self._cmd(method="getAvailablePostviewImageSize")
+    def getAvailablePostviewImageSize(self, version='1.0'):
+        return self._cmd(
+            method="getAvailablePostviewImageSize", version=version)
 
-    def getMovieFileFormat(self):
-        return self._cmd(method="getMovieFileFormat")
+    def getMovieFileFormat(self, version='1.0'):
+        return self._cmd(method="getMovieFileFormat", version=version)
 
-    def getSupportedMovieFileFormat(self):
-        return self._cmd(method="getSupportedMovieFileFormat")
+    def getSupportedMovieFileFormat(self, version='1.0'):
+        return self._cmd(method="getSupportedMovieFileFormat", version=version)
 
-    def getAvailableMovieFileFormat(self):
-        return self._cmd(method="getAvailableMovieFileFormat")
+    def getAvailableMovieFileFormat(self, version='1.0'):
+        return self._cmd(method="getAvailableMovieFileFormat", version=version)
 
-    def getMovieQuality(self):
-        return self._cmd(method="getMovieQuality")
+    def getMovieQuality(self, version='1.0'):
+        return self._cmd(method="getMovieQuality", version=version)
 
-    def getSupportedMovieQuality(self):
-        return self._cmd(method="getSupportedMovieQuality")
+    def getSupportedMovieQuality(self, version='1.0'):
+        return self._cmd(method="getSupportedMovieQuality", version=version)
 
-    def getAvailableMovieQuality(self):
-        return self._cmd(method="getAvailableMovieQuality")
+    def getAvailableMovieQuality(self, version='1.0'):
+        return self._cmd(method="getAvailableMovieQuality", version=version)
 
-    def getSteadyMode(self):
-        return self._cmd(method="getSteadyMode")
+    def getSteadyMode(self, version='1.0'):
+        return self._cmd(method="getSteadyMode", version=version)
 
-    def getSupportedSteadyMode(self):
-        return self._cmd(method="getSupportedSteadyMode")
+    def getSupportedSteadyMode(self, version='1.0'):
+        return self._cmd(method="getSupportedSteadyMode", version=version)
 
-    def getAvailableSteadyMode(self):
-        return self._cmd(method="getAvailableSteadyMode")
+    def getAvailableSteadyMode(self, version='1.0'):
+        return self._cmd(method="getAvailableSteadyMode", version=version)
 
-    def getViewAngle(self):
-        return self._cmd(method="getViewAngle")
+    def getViewAngle(self, version='1.0'):
+        return self._cmd(method="getViewAngle", version=version)
 
-    def getSupportedViewAngle(self):
-        return self._cmd(method="getSupportedViewAngle")
+    def getSupportedViewAngle(self, version='1.0'):
+        return self._cmd(method="getSupportedViewAngle", version=version)
 
-    def getAvailableViewAngle(self):
-        return self._cmd(method="getAvailableViewAngle")
+    def getAvailableViewAngle(self, version='1.0'):
+        return self._cmd(method="getAvailableViewAngle", version=version)
 
-    def getSceneSelection(self):
-        return self._cmd(method="getSceneSelection")
+    def getSceneSelection(self, version='1.0'):
+        return self._cmd(method="getSceneSelection", version=version)
 
-    def getSupportedSceneSelection(self):
-        return self._cmd(method="getSupportedSceneSelection")
+    def getSupportedSceneSelection(self, version='1.0'):
+        return self._cmd(method="getSupportedSceneSelection", version=version)
 
-    def getAvailableSceneSelection(self):
-        return self._cmd(method="getAvailableSceneSelection")
+    def getAvailableSceneSelection(self, version='1.0'):
+        return self._cmd(method="getAvailableSceneSelection", version=version)
 
-    def getColorSetting(self):
-        return self._cmd(method="getColorSetting")
+    def getColorSetting(self, version='1.0'):
+        return self._cmd(method="getColorSetting", version=version)
 
-    def getSupportedColorSetting(self):
-        return self._cmd(method="getSupportedColorSetting")
+    def getSupportedColorSetting(self, version='1.0'):
+        return self._cmd(method="getSupportedColorSetting", version=version)
 
-    def getAvailableColorSetting(self):
-        return self._cmd(method="getAvailableColorSetting")
+    def getAvailableColorSetting(self, version='1.0'):
+        return self._cmd(method="getAvailableColorSetting", version=version)
 
-    def getIntervalTime(self):
-        return self._cmd(method="getIntervalTime")
+    def getIntervalTime(self, version='1.0'):
+        return self._cmd(method="getIntervalTime", version=version)
 
-    def getSupportedIntervalTime(self):
-        return self._cmd(method="getSupportedIntervalTime")
+    def getSupportedIntervalTime(self, version='1.0'):
+        return self._cmd(method="getSupportedIntervalTime", version=version)
 
-    def getAvailableIntervalTime(self):
-        return self._cmd(method="getAvailableIntervalTime")
+    def getAvailableIntervalTime(self, version='1.0'):
+        return self._cmd(method="getAvailableIntervalTime", version=version)
 
-    def getLoopRecTime(self):
-        return self._cmd(method="getLoopRecTime")
+    def getLoopRecTime(self, version='1.0'):
+        return self._cmd(method="getLoopRecTime", version=version)
 
-    def getSupportedLoopRecTime(self):
-        return self._cmd(method="getSupportedLoopRecTime")
+    def getSupportedLoopRecTime(self, version='1.0'):
+        return self._cmd(method="getSupportedLoopRecTime", version=version)
 
-    def getAvailableLoopRecTime(self):
-        return self._cmd(method="getAvailableLoopRecTime")
+    def getAvailableLoopRecTime(self, version='1.0'):
+        return self._cmd(method="getAvailableLoopRecTime", version=version)
 
-    def getFlipSetting(self):
-        return self._cmd(method="getFlipSetting")
+    def getFlipSetting(self, version='1.0'):
+        return self._cmd(method="getFlipSetting", version=version)
 
-    def getSupportedFlipSetting(self):
-        return self._cmd(method="getSupportedFlipSetting")
+    def getSupportedFlipSetting(self, version='1.0'):
+        return self._cmd(method="getSupportedFlipSetting", version=version)
 
-    def getAvailableFlipSetting(self):
-        return self._cmd(method="getAvailableFlipSetting")
+    def getAvailableFlipSetting(self, version='1.0'):
+        return self._cmd(method="getAvailableFlipSetting", version=version)
 
-    def getTvColorSystem(self):
-        return self._cmd(method="getTvColorSystem")
+    def getTvColorSystem(self, version='1.0'):
+        return self._cmd(method="getTvColorSystem", version=version)
 
-    def getSupportedTvColorSystem(self):
-        return self._cmd(method="getSupportedTvColorSystem")
+    def getSupportedTvColorSystem(self, version='1.0'):
+        return self._cmd(method="getSupportedTvColorSystem", version=version)
 
-    def getAvailableTvColorSystem(self):
-        return self._cmd(method="getAvailableTvColorSystem")
+    def getAvailableTvColorSystem(self, version='1.0'):
+        return self._cmd(method="getAvailableTvColorSystem", version=version)
 
-    def startStreaming(self):
-        return self._cmd(method="startStreaming", target="avContent")
+    def startStreaming(self, version='1.0'):
+        return self._cmd(
+            method="startStreaming", target="avContent", version=version)
 
-    def pauseStreaming(self):
-        return self._cmd(method="pauseStreaming", target="avContent")
+    def pauseStreaming(self, version='1.0'):
+        return self._cmd(
+            method="pauseStreaming", target="avContent", version=version)
 
-    def stopStreaming(self):
-        return self._cmd(method="stopStreaming", target="avContent")
+    def stopStreaming(self, version='1.0'):
+        return self._cmd(
+            method="stopStreaming", target="avContent", version=version)
 
-    def getInfraredRemoteControl(self):
-        return self._cmd(method="getInfraredRemoteControl")
+    def getInfraredRemoteControl(self, version='1.0'):
+        return self._cmd(method="getInfraredRemoteControl", version=version)
 
-    def getSupportedInfraredRemoteControl(self):
-        return self._cmd(method="getSupportedInfraredRemoteControl")
+    def getSupportedInfraredRemoteControl(self, version='1.0'):
+        return self._cmd(
+            method="getSupportedInfraredRemoteControl", version=version)
 
-    def getAvailableInfraredRemoteControl(self):
-        return self._cmd(method="getAvailableInfraredRemoteControl")
+    def getAvailableInfraredRemoteControl(self, version='1.0'):
+        return self._cmd(
+            method="getAvailableInfraredRemoteControl", version=version)
 
-    def getAutoPowerOff(self):
-        return self._cmd(method="getAutoPowerOff")
+    def getAutoPowerOff(self, version='1.0'):
+        return self._cmd(method="getAutoPowerOff", version=version)
 
-    def getSupportedAutoPowerOff(self):
-        return self._cmd(method="getSupportedAutoPowerOff")
+    def getSupportedAutoPowerOff(self, version='1.0'):
+        return self._cmd(method="getSupportedAutoPowerOff", version=version)
 
-    def getAvailableAutoPowerOff(self):
-        return self._cmd(method="getAvailableAutoPowerOff")
+    def getAvailableAutoPowerOff(self, version='1.0'):
+        return self._cmd(method="getAvailableAutoPowerOff", version=version)
 
-    def getBeepMode(self):
-        return self._cmd(method="getBeepMode")
+    def getBeepMode(self, version='1.0'):
+        return self._cmd(method="getBeepMode", version=version)
 
-    def getSupportedBeepMode(self):
-        return self._cmd(method="getSupportedBeepMode")
+    def getSupportedBeepMode(self, version='1.0'):
+        return self._cmd(method="getSupportedBeepMode", version=version)
 
-    def getAvailableBeepMode(self):
-        return self._cmd(method="getAvailableBeepMode")
+    def getAvailableBeepMode(self, version='1.0'):
+        return self._cmd(method="getAvailableBeepMode", version=version)
 
-    def getSchemeList(self):
-        return self._cmd(method="getSchemeList", target="avContent")
+    def getSchemeList(self, version='1.0'):
+        return self._cmd(
+            method="getSchemeList", target="avContent", version=version)
 
-    def getStorageInformation(self):
-        return self._cmd(method="getStorageInformation")
+    def getStorageInformation(self, version='1.0'):
+        return self._cmd(method="getStorageInformation", version=version)
 
-    def actFormatStorage(self):
-        return self._cmd(method="actFormatStorage")
+    def actFormatStorage(self, version='1.0'):
+        return self._cmd(method="actFormatStorage", version=version)
 
-    def getAvailableApiList(self):
-        return self._cmd(method="getAvailableApiList")
+    def getAvailableApiList(self, version='1.0'):
+        return self._cmd(method="getAvailableApiList", version=version)
 
-    def getApplicationInfo(self):
-        return self._cmd(method="getApplicationInfo")
+    def getApplicationInfo(self, version='1.0'):
+        return self._cmd(method="getApplicationInfo", version=version)
 
-    def getVersions(self, target=None):
-        return self._cmd(method="getVersions", target=target)
-
-
+    def getVersions(self, target=None, version='1.0'):
+        return self._cmd(method="getVersions", target=target, version=version)
