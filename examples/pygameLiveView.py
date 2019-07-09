@@ -1,3 +1,4 @@
+from __future__ import print_function
 
 from pysony import SonyAPI, ControlPoint
 from struct import unpack
