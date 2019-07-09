@@ -1,0 +1,55 @@
+Searching for camera...
+Found: http://10.0.0.1:10000
+
+Available calls:
+getMethodTypes
+getAvailableApiList
+setShootMode
+getShootMode
+getSupportedShootMode
+getAvailableShootMode
+setSteadyMode
+getSteadyMode
+getSupportedSteadyMode
+getAvailableSteadyMode
+setViewAngle
+getViewAngle
+getSupportedViewAngle
+getAvailableViewAngle
+setMovieQuality
+getMovieQuality
+getSupportedMovieQuality
+getAvailableMovieQuality
+startLiveview
+stopLiveview
+startMovieRec
+stopMovieRec
+startIntervalStillRec
+stopIntervalStillRec
+setCameraFunction
+getCameraFunction
+getSupportedCameraFunction
+getAvailableCameraFunction
+getStorageInformation
+getApplicationInfo
+getVersions
+getEvent
+--
+trying 'getAvailableApiList()':
+{'id': 1, 'result': [['getMethodTypes', 'getAvailableApiList', 'setShootMode', 'getShootMode', 'getSupportedShootMode', 'getAvailableShootMode', 'setSteadyMode', 'getSteadyMode', 'getSupportedSteadyMode', 'getAvailableSteadyMode', 'setViewAngle', 'getViewAngle', 'getSupportedViewAngle', 'getAvailableViewAngle', 'setMovieQuality', 'getMovieQuality', 'getSupportedMovieQuality', 'getAvailableMovieQuality', 'startLiveview', 'stopLiveview', 'startMovieRec', 'stopMovieRec', 'startIntervalStillRec', 'stopIntervalStillRec', 'setCameraFunction', 'getCameraFunction', 'getSupportedCameraFunction', 'getAvailableCameraFunction', 'getStorageInformation', 'getApplicationInfo', 'getVersions', 'getEvent']]}
+
+trying 'getAvailableShootMode()':
+{'id': 1, 'result': ['movie', ['movie', 'intervalstill']]}
+
+trying 'getAvailableSteadyMode()':
+{'id': 1, 'result': ['on', ['off', 'on']]}
+
+trying 'getAvailableViewAngle()':
+{'id': 1, 'result': [120, [120, 170]]}
+
+trying 'getAvailableMovieQuality()':
+{'id': 1, 'result': ['HQ', ['PS', 'HQ', 'STD', 'SLOW', 'SSLOW', 'VGA']]}
+
+trying 'getAvailableCameraFunction()':
+{'id': 1, 'result': ['Remote Shooting', ['Remote Shooting', 'Contents Transfer']]}
+
