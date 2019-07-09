@@ -285,8 +285,7 @@ class SonyAPI():
 
     def actEnableMethods(self, param=None):
         if not param:
-            print """[ERROR] please enter the param like below
-            """
+            print ("""[ERROR] please enter the param like below""")
         return self._access(method="actEnableMethods", param=param)
 
     def _cmd(self, method=None, param=[], target=None):
