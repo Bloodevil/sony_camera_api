@@ -25,13 +25,14 @@
 //# | Padding data size ...                                 |
 //# ------------------------------JPEG data size + Padding data size
 
-package GoSony
+package main
 
 import (
 	"io"
-	"net/http"
-	"net/url"
 	"fmt"
+	"net"
+	"net/http"
+	"mime/multipart"
 )
 
 type CommonHeader struct {
@@ -56,8 +57,30 @@ type SonyCameraFormat struct {
 	Data    []byte
 }
 
-func ParseSonyCameraData(rd io.Reader, dst *SonyCameraFormat) error {
-	return error
+const boundary = ""
+
+//func ParseSonyCameraData(rd io.Reader, dst *SonyCameraFormat) error {
+//	return error
+//}
+
+func handle(w http.ResponseWriter, req *http.Request) {
+	partReader := multipart.NewReader(req.Body, boundary)
+	buf := make([]byte, 256)
+	for {
+		part, err := partReader.NextPart()
+		if err == io.EOF {
+			break
+		}
+		var n int
+		for {
+			n, err = part.Read(buf)
+			if err == io.EOF {
+				break
+			}
+			fmt.Printf(string(buf[:n]))
+		}
+		fmt.Printf(string(buf[:n]))
+	}
 }
 
 func main() {
