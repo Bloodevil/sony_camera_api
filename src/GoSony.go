@@ -27,6 +27,13 @@
 
 package GoSony
 
+import (
+	"io"
+	"net/http"
+	"net/url"
+	"fmt"
+)
+
 type CommonHeader struct {
 	offset          int8
 	Payload_type    int8
@@ -51,4 +58,19 @@ type SonyCameraFormat struct {
 
 func ParseSonyCameraData(rd io.Reader, dst *SonyCameraFormat) error {
 	return error
+}
+
+func main() {
+	n := "tcp"
+	addr := "10.0.0.1:10000"
+	l, err := net.Listen(n, addr)
+	if err != nil {
+		panic("AAAAH")
+	}
+
+	/* HTTP server */
+	server := http.Server{
+		Handler: http.HandlerFunc(handle),
+	}
+	server.Serve(l)
 }
