@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 from api_list import exist_param, no_param
 
 
@@ -15,4 +17,4 @@ def gen():
 
     return result
 
-print gen()
+print(gen())
