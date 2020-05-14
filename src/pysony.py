@@ -1,10 +1,13 @@
 # Echo client program
+import json
+import logging
 import socket
+import sys
 import threading
 import time
-import re
-import json
+from collections import defaultdict
 from struct import unpack, unpack_from
+from xml.etree import ElementTree
 import logging
 import sys
 
@@ -17,100 +20,88 @@ else:
 
 SSDP_ADDR = "239.255.255.250"  # The remote host
 SSDP_PORT = 1900    # The same port as used by the server
-SSDP_MX = 1
 SSDP_ST = "urn:schemas-sony-com:service:ScalarWebAPI:1"
-SSDP_TIMEOUT = 10000  #msec
 PACKET_BUFFER_SIZE = 1024
+SSDP_MSG_TEMPLATE = '\r\n'.join((
+    'M-SEARCH * HTTP/1.1',
+    'HOST: 239.255.255.250:1900',
+    'MAN: "ssdp:discover"',
+    'MX: {mx_timeout}',
+    'ST: {}'.format(SSDP_ST),
+    'USER-AGENT: pysony',
+    '',
+    ''
+))
 
-logger = logging.getLogger('pysony')
-
-
+logger = logging.getLogger(__name__)
 # Find all available cameras using uPNP
 # Improved with code from 'https://github.com/storborg/sonypy' under MIT license.
 
 class ControlPoint(object):
-    def __init__(self):
+    def __init__(self, addr=SSDP_ADDR, port=SSDP_PORT):
+        self.addr, self.port = addr, port
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         sock.settimeout(0.1)
         # Set the socket to broadcast mode.
-        sock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL , 2)
-        self.__udp_socket = sock
+        sock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, 2)
+        self._udp_socket = sock
+
+    def close(self):
+        self._udp_socket.close()
 
     def discover(self, duration=1):
-        msg = '\r\n'.join(["M-SEARCH * HTTP/1.1",
-                           "HOST: 239.255.255.250:1900",
-                           "MAN: \"ssdp:discover\"",
-                           "MX: " + str(duration),
-                           "ST: " + SSDP_ST,
-                           "USER-AGENT: pysony",
-                           "",
-                           ""])
-
-        # Send the message.
-        msg_bytes = bytearray(msg, 'utf8')
-        self.__udp_socket.sendto(msg_bytes, (SSDP_ADDR, SSDP_PORT))
-
-        # Get the responses.
+        # Send discovery message:
+        self._send_ssdp(duration)
+        # Listen for responses:
         packets = self._listen_for_discover(duration)
         endpoints = []
-        for host,addr,data in packets:
-            resp = self._parse_ssdp_response(data)
-            endpoint = self._read_device_definition(resp['location'])
+        for packet in packets:
+            resp = self._parse_ssdp_response(packet)
+            endpoint = self._read_device_definition(resp['location']).replace('/sony', '')
             endpoints.append(endpoint)
         return endpoints
 
+    def _send_ssdp(self, duration):
+        msg = SSDP_MSG_TEMPLATE.format(mx_timeout=duration)
+        self._udp_socket.sendto(msg.encode('utf-8'), (self.addr, self.port))
+
     def _listen_for_discover(self, duration):
+        packets = defaultdict(lambda: b'')  # {(host, port): data}
         start = time.time()
-        packets = {}  # {(host, port): data}
         while (time.time() < (start + duration)):
             try:
-                data, (host, port) = self.__udp_socket.recvfrom(1024)
+                data, (host, port) = self._udp_socket.recvfrom(PACKET_BUFFER_SIZE)
             except socket.timeout:
-                break
-        packets.setdefault((host, port), b'')
-        packets[host, port] += data
-        return [(host, port, data) for (host, post), data in packets.items()]
+                pass
+            else:
+                packets[(host, port)] += data
+        return packets.values()
 
     def _parse_ssdp_response(self, data):
         data_str = data.decode('utf8')
-        lines = data_str.split('\r\n')
+        lines = data_str.strip().splitlines()
         assert lines[0] == 'HTTP/1.1 200 OK'
         headers = {}
-        for line in lines[1:]:
-            if line:
-                try:
-                    key, val = line.split(': ', 1)
-                    headers[key.lower()] = val
-                except:
-                    logger.debug("Cannot parse SSDP response for this line: %s", line)
-                    pass
+        for line in filter(None, lines[1:]):
+            try:
+                key, val = line.split(': ', 1)
+                headers[key.lower()] = val
+            except ValueError:
+                logger.debug("Cannot parse SSDP response for this line: %s", line)
         return headers
 
     def _parse_device_definition(self, doc):
         """
         Parse the XML device definition file.
         """
-        dd_regex = ('<av:X_ScalarWebAPI_Service>'
-            '\s*'
-            '<av:X_ScalarWebAPI_ServiceType>'
-            '(.+?)'
-            '</av:X_ScalarWebAPI_ServiceType>'
-            '\s*'
-            '<av:X_ScalarWebAPI_ActionList_URL>'
-            '(.+?)'
-            '/sony'                               # and also strip '/sony'
-            '</av:X_ScalarWebAPI_ActionList_URL>'
-            '\s*'
-            '<av:X_ScalarWebAPI_AccessType\s*/>'  # Note: QX10 has 'Type />', HX60 has 'Type/>'
-            '\s*'
-            '</av:X_ScalarWebAPI_Service>')
-
-        doc_str = doc.decode('utf8')
+        xml_tree = ElementTree.parse(doc)
+        namespace = {'av': 'urn:schemas-sony-com:av'}
         services = {}
-        for m in re.findall(dd_regex, doc_str):
-            service_name = m[0]
-            endpoint = m[1]
-            services[service_name] = endpoint
+        for elm in xml_tree.findall('.//av:X_ScalarWebAPI_Service', namespace):
+            svc_type = elm.find('av:X_ScalarWebAPI_ServiceType', namespace).text
+            svc_loc = elm.find('av:X_ScalarWebAPI_ActionList_URL', namespace).text
+            services[svc_type] = svc_loc
+
         return services
 
     def _read_device_definition(self, url):
@@ -118,8 +109,8 @@ class ControlPoint(object):
         Fetch and parse the device definition, and extract the URL endpoint for
         the camera API service.
         """
-        r = urlopen(url)
-        services = self._parse_device_definition(r.read())
+        resp = urlopen(url)
+        services = self._parse_device_definition(resp)
 
         return services['camera']
 
@@ -295,7 +286,7 @@ class SonyAPI():
 
         if self.maxversion < minversion:
             raise ValueError("Method %s with 'minversion' %s exceeds user supplied 'maxversion' %s", method, minversion, self.maxversion)
-        
+
         if version < minversion:
             version = minversion
         if version > self.maxversion:

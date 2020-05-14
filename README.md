@@ -15,6 +15,32 @@ using repo:
     git clone https://github.com/Bloodevil/sony_camera_api.git
     python setup.py install
 
+Running tests
+=============
+
+You will likely want to set up a [virtualenv](https://virtualenv.pypa.io/en/stable/) first and complete the following steps inside it.
+
+Install requirements:
+
+	pip install -r test-requirements.txt
+
+Run tests:
+
+	python -m unittest discover
+
+(The `run_tests.sh` script does both of these automatically)
+
+By default, the test suite verifies behavior locally using dummy services.
+
+If you want to run tests live against your real camera, connect to the camera's
+wireless access point and set the `TEST_LIVE_CAMERA` environment variable.
+For example:
+
+	TEST_LIVE_CAMERA=1 python -m unittest discover
+
+**CAUTION:** Use with your camera at your own risk. This is free software that offers no warranty. For details, see LICENSE.
+
+
 Usage
 ====
 
@@ -30,8 +56,8 @@ api_list
 
 branches
 ====
- develop - please request merge here.
- master - pip live
+ - develop : please request merge here.
+ - master : pip live
 
 examples
 ====
