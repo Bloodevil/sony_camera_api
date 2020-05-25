@@ -28,10 +28,14 @@
 package main
 
 import (
+	"os"
+	"bytes"
 	"io"
+	"io/ioutil"
 	"fmt"
 	"net"
 	"net/http"
+        "encoding/json"
 	"mime/multipart"
 )
 
@@ -84,16 +88,48 @@ func handle(w http.ResponseWriter, req *http.Request) {
 }
 
 func main() {
-	n := "tcp"
-	addr := "10.0.0.1:10000"
-	l, err := net.Listen(n, addr)
-	if err != nil {
-		panic("AAAAH")
-	}
+    if len(os.Args) != 2 {
+        fmt.Fprintf(os.Stderr, "Usage: %s host:port", os.Args[0])
+        os.Exit(1)
+    }
+    service := os.Args[1]
 
-	/* HTTP server */
-	server := http.Server{
-		Handler: http.HandlerFunc(handle),
-	}
-	server.Serve(l)
+    values := []byte(`{"method": "getAvailableApiList", "version": "1.0", "id": 1, "params": "[]"}`)
+    jsonValue, _ := json.Marshal(values)
+
+    resp, err := http.Post(service + "/sony/camera",
+			"application/json",
+                        jsonValue)
+    if err != nil {
+	checkError(err)	// handle error
+    }
+    defer resp.Body.Close()
+    body, err := ioutil.ReadAll(resp.Body)
+    fmt.Fprintf(os.Stderr, "%s", body)
+    os.Exit(0)
+}
+
+func checkError(err error) {
+    if err != nil {
+        fmt.Fprintf(os.Stderr, "Fatal error: %s", err.Error())
+        os.Exit(1)
+    }
+}
+
+func readFully(conn net.Conn) ([]byte, error) {
+    defer conn.Close()
+
+    result := bytes.NewBuffer(nil)
+    var buf [512]byte
+    for {
+        n, err := conn.Read(buf[0:])
+        result.Write(buf[0:n])
+        if err != nil {
+            if err == io.EOF {
+                break
+            }
+            return nil, err
+        }
+    }
+    return result.Bytes(), nil
 }
