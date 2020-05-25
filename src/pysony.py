@@ -269,7 +269,8 @@ class SonyAPI():
             self.params["params"] = []
 
         try:
-            result = eval(urllib2.urlopen(self.QX_ADDR + "/sony/accessControl", json.dumps(self.params)).read())
+            result = eval(urlopen(self.QX_ADDR + "/sony/accessControl",
+            bytearray(json.dumps(self.params), 'utf8' )).read())
         except Exception as e:
             result = "[ERROR] camera doesn't work" + str(e)
         return result

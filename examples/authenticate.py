@@ -216,11 +216,12 @@ system/setCurrentTime"
 # Request random nonce from camera
 resp = camera.actEnableMethods([{"methods": "", "developerName": "", \
     "developerID": "", "sg": ""}])
+print(resp)
 dg = resp["result"][0]["dg"]
 
 # Append nonce to AUTH string and hash
 h = hashlib.sha256()
-h.update(bytes(AUTH_CONST_STRING + dg))
+h.update(bytes(AUTH_CONST_STRING + dg, encoding='utf8'))
 sg = base64.b64encode(h.digest()).decode("UTF-8")
 
 # Pass credentials to camera, which will eval with secret method/values
@@ -228,5 +229,5 @@ resp = camera.actEnableMethods([{"methods": METHODS_TO_ENABLE, \
    "developerName": "Rubber Duck Paradise", \
    "developerID": "22222222-2222-2222-2222-222222222222", "sg": sg}])
 
-print "Authenicated:", resp
+print ("Authenicated:", resp)
 
