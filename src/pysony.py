@@ -38,12 +38,14 @@ logger = logging.getLogger(__name__)
 # Improved with code from 'https://github.com/storborg/sonypy' under MIT license.
 
 class ControlPoint(object):
-    def __init__(self, addr=SSDP_ADDR, port=SSDP_PORT):
+    def __init__(self, addr=SSDP_ADDR, port=SSDP_PORT, interface=None):
         self.addr, self.port = addr, port
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         sock.settimeout(0.1)
         # Set the socket to broadcast mode.
         sock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, 2)
+        if interface:
+          sock.setsockopt(socket.SOL_SOCKET, 25, str(interface + '\0').encode('utf-8'))
         self._udp_socket = sock
 
     def close(self):
