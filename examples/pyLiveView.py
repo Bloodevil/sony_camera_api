@@ -145,7 +145,7 @@ class liveview_grabber(threading.Thread):
       lst.start()
 
       versions = camera.getVersions()
-      if versions and type(versions) == dict and 'result' in versions.keys():
+      if versions and 'result' in versions.keys():
          version = versions['result'][-1]
       else:
          version = '1.0'
@@ -157,7 +157,7 @@ class liveview_grabber(threading.Thread):
          else:
             mode = None
 
-         if mode and type(mode) == dict and 'result' in mode.keys():
+         if mode and 'result' in mode.keys():
             status = mode['result'][1]
             if self.active == False and status['cameraStatus'] == 'MovieRecording':
                self.frame_count = 0
