@@ -144,14 +144,20 @@ class liveview_grabber(threading.Thread):
       lst = SonyAPI.LiveviewStreamThread(url)
       lst.start()
 
+      versions = camera.getVersions()
+      if versions and 'result' in versions.keys():
+         version = versions['result'][-1]
+      else:
+         version = '1.0'
+
       while not self.event_terminate.isSet():
          # Handle events from the camera (record start/stop)
          if self.frame_count % 50 == 0:
-            mode = camera.getEvent(["false"])
+            mode = camera.getEvent(["false"], version=version)
          else:
             mode = None
 
-         if mode and type(mode) == dict:
+         if mode and 'result' in mode.keys():
             status = mode['result'][1]
             if self.active == False and status['cameraStatus'] == 'MovieRecording':
                self.frame_count = 0
