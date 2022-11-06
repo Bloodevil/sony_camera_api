@@ -194,7 +194,9 @@ no_param = ["getShootMode",
             "getAvailableApiList",
             "getApplicationInfo",
             "getVersions",
-            "getMethodTypes"] #  camera, system and avContent
+            "getMethodTypes",
+            "startBulbShooting",
+            "stopBulbShooting"] #  camera, system and avContent
 
 params = [{"name":"shoot mode",
            "value": ["still", "movie", "audio", "intervalstill"],

@@ -1061,3 +1061,9 @@ class SonyAPI():
 
     def getVersions(self, target=None, version='1.0'):
         return self._cmd(method="getVersions", target=target, version=version)
+
+    def startBulbShooting(self, version='1.0'):
+        return self._cmd(method="startBulbShooting", version=version)
+
+    def stopBulbShooting(self, version='1.0'):
+        return self._cmd(method="stopBulbShooting", version=version)
